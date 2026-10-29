@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Энергоград — тест AR ванной</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.8/aframe/build/aframe-ar.js"></script>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#000}
+    .top{position:fixed;z-index:20;top:14px;left:50%;transform:translateX(-50%);width:min(92vw,520px);text-align:center;pointer-events:none}
+    .pill{display:inline-block;background:rgba(255,255,255,.94);color:#103b4a;padding:10px 16px;border-radius:18px;font-weight:700;box-shadow:0 5px 20px rgba(0,0,0,.18)}
+    #hint{margin-top:8px;font-size:14px;font-weight:600;background:rgba(16,59,74,.85);color:#fff;padding:8px 12px;border-radius:14px}
+    #controls{position:fixed;z-index:30;left:0;right:0;bottom:24px;display:none;flex-direction:column;align-items:center;gap:10px;padding:0 16px}
+    #question{background:rgba(255,255,255,.95);color:#123;font-weight:800;font-size:20px;padding:12px 18px;border-radius:18px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,.2)}
+    #closeTap{border:0;border-radius:18px;padding:15px 28px;font-size:19px;font-weight:800;color:#fff;background:linear-gradient(90deg,#ff7b42,#ff168a);box-shadow:0 7px 20px rgba(0,0,0,.28)}
+    #success{position:fixed;z-index:35;inset:0;display:none;align-items:center;justify-content:center;padding:22px;pointer-events:none}
+    #successBox{background:rgba(255,255,255,.96);color:#087b5f;border-radius:24px;padding:24px 28px;text-align:center;font-size:24px;font-weight:900;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+    #status{position:fixed;z-index:25;left:12px;bottom:12px;background:rgba(0,0,0,.55);color:#fff;border-radius:10px;padding:6px 9px;font-size:12px;pointer-events:none}
+    .arjs-loader{position:fixed;z-index:50;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;color:#123;font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="arjs-loader">Запускаем камеру…<br>Разрешите доступ, если браузер спросит.</div>
+  <div class="top">
+    <div class="pill">Энергоград · тест ванной</div>
+    <div id="hint">Наведите камеру на метку Hiro</div>
+  </div>
+  <div id="controls">
+    <div id="question">Ой! Вода убегает. Что нужно сделать?</div>
+    <button id="closeTap" type="button">Закрыть кран</button>
+  </div>
+  <div id="success"><div id="successBox">✓ Отлично!<br>Вода спасена! ⚡</div></div>
+  <div id="status">ожидаем метку</div>
+
+  <a-scene
+    embedded
+    vr-mode-ui="enabled:false"
+    renderer="antialias:true; alpha:true; precision:medium"
+    arjs="sourceType:webcam; debugUIEnabled:false; detectionMode:mono_and_matrix; matrixCodeType:3x3;"
+  >
+    <a-assets>
+      <video id="waterVideo" src="assets/water.mp4" preload="auto" loop muted playsinline webkit-playsinline crossorigin="anonymous"></video>
+    </a-assets>
+
+    <a-marker id="marker" preset="hiro" emitevents="true" smooth="true" smoothCount="5" smoothTolerance="0.01" smoothThreshold="2">
+      <a-video id="waterPlane" src="#waterVideo" position="0 0.02 0" rotation="-90 0 0" width="2.0" height="2.0" visible="true"></a-video>
+    </a-marker>
+    <a-entity camera></a-entity>
+  </a-scene>
+
+<script>
+  window.addEventListener('load', () => {
+    const marker = document.getElementById('marker');
+    const video = document.getElementById('waterVideo');
+    const plane = document.getElementById('waterPlane');
+    const controls = document.getElementById('controls');
+    const success = document.getElementById('success');
+    const hint = document.getElementById('hint');
+    const status = document.getElementById('status');
+    const btn = document.getElementById('closeTap');
+    let solved = false;
+
+    document.addEventListener('arjs-video-loaded', () => {
+      const loader = document.querySelector('.arjs-loader');
+      if (loader) loader.style.display='none';
+      status.textContent='камера готова';
+    });
+
+    marker.addEventListener('markerFound', async () => {
+      status.textContent='метка найдена';
+      hint.textContent='Нарушение найдено!';
+      if (!solved) {
+        controls.style.display='flex';
+        plane.setAttribute('visible','true');
+        try { video.currentTime = 0; await video.play(); } catch(e) { status.textContent='нажмите «Закрыть кран»'; }
+      }
+    });
+
+    marker.addEventListener('markerLost', () => {
+      status.textContent='метка потеряна';
+      hint.textContent='Снова наведите камеру на метку Hiro';
+      if (!solved) controls.style.display='none';
+      video.pause();
+    });
+
+    btn.addEventListener('click', () => {
+      solved = true;
+      video.pause();
+      plane.setAttribute('visible','false');
+      controls.style.display='none';
+      success.style.display='flex';
+      hint.textContent='Миссия выполнена';
+      status.textContent='вода спасена';
+      setTimeout(()=>success.style.display='none',2600);
+    });
+  });
+</script>
+</body>
+</html>
