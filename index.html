@@ -3,31 +3,300 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <title>Энергоград — тест ванной</title>
+  <meta name="theme-color" content="#0f2f3d" />
+  <title>Энергоград — Ванная</title>
+
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
   <style>
-    html, body { margin:0; width:100%; height:100%; overflow:hidden; font-family:Arial,sans-serif; background:#000; }
-    #topTitle { position:fixed; z-index:20; top:18px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.92); color:#17384a; border-radius:24px; padding:12px 22px; font-size:22px; font-weight:700; white-space:nowrap; box-shadow:0 5px 18px rgba(0,0,0,.15); }
-    #hint { position:fixed; z-index:20; top:92px; left:4%; right:4%; background:rgba(23,76,97,.90); color:#fff; text-align:center; border-radius:20px; padding:12px 14px; font-size:21px; font-weight:700; }
-    #controls { display:none; position:fixed; z-index:20; left:4%; right:4%; bottom:20px; text-align:center; }
-    #question { background:rgba(255,255,255,.95); color:#102b3a; border-radius:25px; padding:18px; font-size:28px; line-height:1.15; font-weight:800; margin-bottom:14px; box-shadow:0 5px 18px rgba(0,0,0,.15); }
-    #closeTap { border:0; border-radius:28px; padding:16px 36px; font-size:28px; font-weight:800; color:#fff; background:linear-gradient(90deg,#ff6a36,#ff009c); box-shadow:0 7px 18px rgba(0,0,0,.22); cursor:pointer; }
-    #success { display:none; background:rgba(255,255,255,.96); color:#167647; border-radius:25px; padding:18px; font-size:27px; font-weight:800; box-shadow:0 5px 18px rgba(0,0,0,.15); }
-    #status { position:fixed; z-index:20; left:18px; bottom:8px; color:rgba(255,255,255,.92); font-size:14px; text-shadow:0 1px 3px #000; pointer-events:none; }
-    #loader { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; background:#fff; color:#17384a; font-size:24px; font-weight:700; }
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #000;
+    }
+
+    a-scene {
+      position: fixed !important;
+      inset: 0;
+      z-index: 1;
+    }
+
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      text-align: center;
+      color: #153949;
+      background: #f7fbfc;
+      font-size: 23px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    #scanUI {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .title-pill {
+      position: absolute;
+      top: max(18px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 20px;
+      border-radius: 999px;
+      color: #17384a;
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 8px 25px rgba(0,0,0,.18);
+      font-size: clamp(18px, 5vw, 23px);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .scan-hint {
+      position: absolute;
+      left: 6%;
+      right: 6%;
+      bottom: max(28px, env(safe-area-inset-bottom));
+      padding: 14px 18px;
+      border-radius: 22px;
+      color: white;
+      background: rgba(20,71,91,.88);
+      box-shadow: 0 8px 25px rgba(0,0,0,.18);
+      text-align: center;
+      font-size: clamp(17px, 4.6vw, 21px);
+      line-height: 1.25;
+      font-weight: 750;
+    }
+
+    #gameOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      overflow-y: auto;
+      padding:
+        max(18px, env(safe-area-inset-top))
+        16px
+        max(18px, env(safe-area-inset-bottom));
+      background: rgba(5,23,32,.62);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .game-shell {
+      width: min(100%, 520px);
+      min-height: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .game-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .room-name {
+      flex: 1;
+      padding: 11px 16px;
+      border-radius: 18px;
+      color: #17384a;
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 7px 22px rgba(0,0,0,.16);
+      font-size: clamp(18px, 5vw, 23px);
+      font-weight: 850;
+      text-align: center;
+    }
+
+    .close-game {
+      width: 46px;
+      height: 46px;
+      flex: 0 0 46px;
+      border: 0;
+      border-radius: 50%;
+      color: #17384a;
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 7px 22px rgba(0,0,0,.16);
+      font-size: 25px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .media-card {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      border: 4px solid rgba(255,255,255,.92);
+      border-radius: 28px;
+      background: #dfecef;
+      box-shadow: 0 16px 40px rgba(0,0,0,.28);
+    }
+
+    #waterVideo,
+    #bathroomStill {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #bathroomStill {
+      display: none;
+    }
+
+    .found-badge {
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      z-index: 3;
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: #fff;
+      background: rgba(12,75,96,.91);
+      box-shadow: 0 5px 15px rgba(0,0,0,.18);
+      font-size: clamp(14px, 4vw, 17px);
+      font-weight: 800;
+    }
+
+    .task-card,
+    .success-card {
+      padding: 17px 18px;
+      border-radius: 24px;
+      background: rgba(255,255,255,.97);
+      box-shadow: 0 10px 28px rgba(0,0,0,.20);
+      text-align: center;
+    }
+
+    .task-card {
+      color: #102b3a;
+      font-size: clamp(21px, 5.7vw, 29px);
+      line-height: 1.12;
+      font-weight: 850;
+    }
+
+    #closeTap {
+      width: 100%;
+      min-height: 58px;
+      border: 0;
+      border-radius: 24px;
+      padding: 15px 20px;
+      color: #fff;
+      background: linear-gradient(90deg, #ff6b37, #ff008f);
+      box-shadow: 0 10px 25px rgba(0,0,0,.22);
+      font-size: clamp(22px, 6vw, 29px);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .success-card {
+      display: none;
+      color: #14683f;
+      font-size: clamp(21px, 5.6vw, 28px);
+      line-height: 1.18;
+      font-weight: 900;
+    }
+
+    #scanAgain {
+      display: none;
+      width: 100%;
+      min-height: 52px;
+      border: 2px solid rgba(255,255,255,.8);
+      border-radius: 20px;
+      padding: 12px 18px;
+      color: #fff;
+      background: rgba(16,62,79,.78);
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    #status {
+      position: fixed;
+      z-index: 25;
+      left: 12px;
+      top: max(72px, calc(env(safe-area-inset-top) + 65px));
+      padding: 6px 9px;
+      border-radius: 10px;
+      color: rgba(255,255,255,.88);
+      background: rgba(0,0,0,.28);
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    @media (max-height: 700px) {
+      .game-shell { justify-content: flex-start; }
+      .media-card { width: min(82vw, 370px); align-self: center; }
+      .task-card { font-size: 20px; padding: 13px 15px; }
+      #closeTap { min-height: 50px; font-size: 22px; }
+    }
   </style>
 </head>
+
 <body>
   <div id="loader">Запускаем камеру…<br>Разрешите доступ к камере.</div>
-  <div id="topTitle">Энергоград · тест ванной</div>
-  <div id="hint">Наведите камеру на картинку ванной</div>
-  <div id="controls">
-    <div id="question">Ой! Вода убегает. Что нужно сделать?</div>
-    <button id="closeTap">Закрыть кран</button>
-    <div id="success">✓ Отлично! Вода спасена! ⚡</div>
+
+  <div id="scanUI">
+    <div class="title-pill">Энергоград · Ванная</div>
+    <div class="scan-hint" id="scanHint">Наведите камеру на картинку ванной</div>
   </div>
+
   <div id="status">запускаем камеру…</div>
+
+  <div id="gameOverlay">
+    <div class="game-shell">
+      <div class="game-head">
+        <div class="room-name">🚿 Ванная комната</div>
+        <button class="close-game" id="closeGame" aria-label="Закрыть">×</button>
+      </div>
+
+      <div class="media-card">
+        <div class="found-badge" id="foundBadge">⚠ Нарушение найдено!</div>
+        <video
+          id="waterVideo"
+          src="./assets/water.mp4"
+          preload="auto"
+          loop
+          muted
+          playsinline
+          webkit-playsinline></video>
+        <img
+          id="bathroomStill"
+          src="./assets/bathroom.png"
+          alt="Ванная комната" />
+      </div>
+
+      <div class="task-card" id="taskCard">
+        Ой! Вода убегает.<br>Что нужно сделать?
+      </div>
+
+      <button id="closeTap">Закрыть кран</button>
+
+      <div class="success-card" id="successCard">
+        ✓ Отлично! Вода спасена! 💧⚡
+      </div>
+
+      <button id="scanAgain">Вернуться к поиску</button>
+    </div>
+  </div>
 
   <a-scene
     mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
@@ -37,30 +306,30 @@
     xr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
 
-    <a-assets>
-      <video id="waterVideo" src="./assets/water.mp4" preload="auto" loop muted playsinline webkit-playsinline crossorigin="anonymous"></video>
-    </a-assets>
-
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-    <a-entity id="bathroomTarget" mindar-image-target="targetIndex: 0">
-      <a-video id="waterPlane" src="#waterVideo" position="0 0 0.01" width="1" height="1" visible="false"></a-video>
-    </a-entity>
+    <a-entity id="bathroomTarget" mindar-image-target="targetIndex: 0"></a-entity>
   </a-scene>
 
   <script>
     const loader = document.getElementById('loader');
-    const hint = document.getElementById('hint');
-    const controls = document.getElementById('controls');
-    const question = document.getElementById('question');
-    const button = document.getElementById('closeTap');
-    const success = document.getElementById('success');
+    const scanUI = document.getElementById('scanUI');
+    const scanHint = document.getElementById('scanHint');
     const status = document.getElementById('status');
+
+    const gameOverlay = document.getElementById('gameOverlay');
     const target = document.getElementById('bathroomTarget');
-    const video = document.getElementById('waterVideo');
-    const plane = document.getElementById('waterPlane');
     const scene = document.querySelector('a-scene');
 
+    const video = document.getElementById('waterVideo');
+    const still = document.getElementById('bathroomStill');
+    const taskCard = document.getElementById('taskCard');
+    const closeTap = document.getElementById('closeTap');
+    const successCard = document.getElementById('successCard');
+    const scanAgain = document.getElementById('scanAgain');
+    const closeGame = document.getElementById('closeGame');
+    const foundBadge = document.getElementById('foundBadge');
+
+    let gameOpen = false;
     let solved = false;
 
     const hideLoader = () => {
@@ -68,56 +337,82 @@
       status.textContent = 'камера готова — ищем ванную';
     };
 
+    const resetGame = () => {
+      solved = false;
+      gameOpen = false;
+
+      video.pause();
+      video.currentTime = 0;
+      video.style.display = 'block';
+      still.style.display = 'none';
+
+      taskCard.style.display = 'block';
+      closeTap.style.display = 'block';
+      successCard.style.display = 'none';
+      scanAgain.style.display = 'none';
+      foundBadge.textContent = '⚠ Нарушение найдено!';
+
+      gameOverlay.style.display = 'none';
+      scanUI.style.display = 'block';
+      scanHint.textContent = 'Наведите камеру на картинку ванной';
+      status.textContent = 'камера готова — ищем ванную';
+    };
+
+    const openGame = async () => {
+      if (gameOpen) return;
+      gameOpen = true;
+      solved = false;
+
+      scanUI.style.display = 'none';
+      gameOverlay.style.display = 'block';
+      status.textContent = 'ванная распознана';
+
+      video.style.display = 'block';
+      still.style.display = 'none';
+      video.currentTime = 0;
+
+      try {
+        await video.play();
+      } catch (e) {
+        foundBadge.textContent = '⚠ Нарушение найдено! Нажмите на картинку';
+      }
+    };
+
     scene.addEventListener('arReady', hideLoader);
     setTimeout(hideLoader, 4500);
 
-    target.addEventListener('targetFound', async () => {
-      hint.textContent = 'Нарушение найдено!';
-      status.textContent = 'ванная распознана';
-      controls.style.display = 'block';
+    target.addEventListener('targetFound', openGame);
 
-      if (!solved) {
-        question.style.display = 'block';
-        button.style.display = 'inline-block';
-        success.style.display = 'none';
-        plane.setAttribute('visible', 'true');
-        try {
-          video.currentTime = 0;
-          await video.play();
-        } catch (e) {
-          status.textContent = 'ванная распознана — коснитесь экрана';
-        }
+    target.addEventListener('targetLost', () => {
+      if (!gameOpen) {
+        status.textContent = 'ищем ванную';
       }
     });
 
-    target.addEventListener('targetLost', () => {
-      hint.textContent = 'Наведите камеру на картинку ванной';
-      status.textContent = 'ищем ванную';
-      controls.style.display = 'none';
-      video.pause();
-      plane.setAttribute('visible', 'false');
-      solved = false;
-      question.style.display = 'block';
-      button.style.display = 'inline-block';
-      success.style.display = 'none';
-    });
-
-    button.addEventListener('click', () => {
+    closeTap.addEventListener('click', () => {
       solved = true;
+
       video.pause();
-      plane.setAttribute('visible', 'false');
-      question.style.display = 'none';
-      button.style.display = 'none';
-      success.style.display = 'block';
-      hint.textContent = 'Вода спасена!';
+      video.style.display = 'none';
+      still.style.display = 'block';
+
+      taskCard.style.display = 'none';
+      closeTap.style.display = 'none';
+      successCard.style.display = 'block';
+      scanAgain.style.display = 'block';
+
+      foundBadge.textContent = '✓ Кран закрыт';
       status.textContent = 'задание выполнено';
     });
 
-    document.body.addEventListener('click', async () => {
-      if (!solved && plane.getAttribute('visible')) {
+    video.addEventListener('click', async () => {
+      if (!solved) {
         try { await video.play(); } catch (e) {}
       }
-    }, { passive: true });
+    });
+
+    scanAgain.addEventListener('click', resetGame);
+    closeGame.addEventListener('click', resetGame);
   </script>
 </body>
 </html>
