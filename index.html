@@ -1,143 +1,123 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Энергоград — тест AR ванной</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Энергоград — тест ванной</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.8/aframe/build/aframe-ar.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <style>
-    html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#000}
-    .top{position:fixed;z-index:20;top:14px;left:50%;transform:translateX(-50%);width:min(92vw,520px);text-align:center;pointer-events:none}
-    .pill{display:inline-block;background:rgba(255,255,255,.94);color:#103b4a;padding:10px 16px;border-radius:18px;font-weight:700;box-shadow:0 5px 20px rgba(0,0,0,.18)}
-    #hint{margin-top:8px;font-size:14px;font-weight:600;background:rgba(16,59,74,.85);color:#fff;padding:8px 12px;border-radius:14px}
-    #controls{position:fixed;z-index:30;left:0;right:0;bottom:24px;display:none;flex-direction:column;align-items:center;gap:10px;padding:0 16px}
-    #question{background:rgba(255,255,255,.95);color:#123;font-weight:800;font-size:20px;padding:12px 18px;border-radius:18px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,.2)}
-    #closeTap{border:0;border-radius:18px;padding:15px 28px;font-size:19px;font-weight:800;color:#fff;background:linear-gradient(90deg,#ff7b42,#ff168a);box-shadow:0 7px 20px rgba(0,0,0,.28)}
-    #success{position:fixed;z-index:35;inset:0;display:none;align-items:center;justify-content:center;padding:22px;pointer-events:none}
-    #successBox{background:rgba(255,255,255,.96);color:#087b5f;border-radius:24px;padding:24px 28px;text-align:center;font-size:24px;font-weight:900;box-shadow:0 8px 30px rgba(0,0,0,.25)}
-    #status{position:fixed;z-index:25;left:12px;bottom:12px;background:rgba(0,0,0,.55);color:#fff;border-radius:10px;padding:6px 9px;font-size:12px;pointer-events:none}
-    .loader{position:fixed;z-index:50;inset:0;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;color:#123;font-weight:700}
+    html, body { margin:0; width:100%; height:100%; overflow:hidden; font-family:Arial,sans-serif; background:#000; }
+    #topTitle { position:fixed; z-index:20; top:18px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.92); color:#17384a; border-radius:24px; padding:12px 22px; font-size:22px; font-weight:700; white-space:nowrap; box-shadow:0 5px 18px rgba(0,0,0,.15); }
+    #hint { position:fixed; z-index:20; top:92px; left:4%; right:4%; background:rgba(23,76,97,.90); color:#fff; text-align:center; border-radius:20px; padding:12px 14px; font-size:21px; font-weight:700; }
+    #controls { display:none; position:fixed; z-index:20; left:4%; right:4%; bottom:20px; text-align:center; }
+    #question { background:rgba(255,255,255,.95); color:#102b3a; border-radius:25px; padding:18px; font-size:28px; line-height:1.15; font-weight:800; margin-bottom:14px; box-shadow:0 5px 18px rgba(0,0,0,.15); }
+    #closeTap { border:0; border-radius:28px; padding:16px 36px; font-size:28px; font-weight:800; color:#fff; background:linear-gradient(90deg,#ff6a36,#ff009c); box-shadow:0 7px 18px rgba(0,0,0,.22); cursor:pointer; }
+    #success { display:none; background:rgba(255,255,255,.96); color:#167647; border-radius:25px; padding:18px; font-size:27px; font-weight:800; box-shadow:0 5px 18px rgba(0,0,0,.15); }
+    #status { position:fixed; z-index:20; left:18px; bottom:8px; color:rgba(255,255,255,.92); font-size:14px; text-shadow:0 1px 3px #000; pointer-events:none; }
+    #loader { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; background:#fff; color:#17384a; font-size:24px; font-weight:700; }
   </style>
 </head>
 <body>
-  <div class="loader" id="loader">Запускаем камеру…<br>Разрешите доступ, если браузер спросит.</div>
-
-  <div class="top">
-    <div class="pill">Энергоград · тест ванной</div>
-    <div id="hint">Наведите камеру на метку Hiro</div>
-  </div>
-
+  <div id="loader">Запускаем камеру…<br>Разрешите доступ к камере.</div>
+  <div id="topTitle">Энергоград · тест ванной</div>
+  <div id="hint">Наведите камеру на картинку ванной</div>
   <div id="controls">
     <div id="question">Ой! Вода убегает. Что нужно сделать?</div>
-    <button id="closeTap" type="button">Закрыть кран</button>
+    <button id="closeTap">Закрыть кран</button>
+    <div id="success">✓ Отлично! Вода спасена! ⚡</div>
   </div>
-
-  <div id="success"><div id="successBox">✓ Отлично!<br>Вода спасена! ⚡</div></div>
-  <div id="status">запускаем камеру</div>
+  <div id="status">запускаем камеру…</div>
 
   <a-scene
-    id="scene"
+    mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
     embedded
-    xr-mode-ui="enabled:false"
-    renderer="antialias:true; alpha:true; precision:medium"
-    arjs="sourceType:webcam; debugUIEnabled:false;"
-  >
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights"
+    xr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
     <a-assets>
-      <video id="waterVideo"
-        src="assets/water.mp4"
-        preload="auto"
-        loop
-        muted
-        playsinline
-        webkit-playsinline>
-      </video>
+      <video id="waterVideo" src="./assets/water.mp4" preload="auto" loop muted playsinline webkit-playsinline crossorigin="anonymous"></video>
     </a-assets>
 
-    <a-marker id="marker"
-      preset="hiro"
-      emitevents="true"
-      smooth="true"
-      smoothCount="5"
-      smoothTolerance="0.01"
-      smoothThreshold="2">
-      <a-video id="waterPlane"
-        src="#waterVideo"
-        position="0 0.02 0"
-        rotation="-90 0 0"
-        width="2"
-        height="2"
-        visible="true">
-      </a-video>
-    </a-marker>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity camera></a-entity>
+    <a-entity id="bathroomTarget" mindar-image-target="targetIndex: 0">
+      <a-video id="waterPlane" src="#waterVideo" position="0 0 0.01" width="1" height="1" visible="false"></a-video>
+    </a-entity>
   </a-scene>
 
-<script>
-window.addEventListener('load', () => {
-  const loader = document.getElementById('loader');
-  const scene = document.getElementById('scene');
-  const marker = document.getElementById('marker');
-  const video = document.getElementById('waterVideo');
-  const plane = document.getElementById('waterPlane');
-  const controls = document.getElementById('controls');
-  const success = document.getElementById('success');
-  const hint = document.getElementById('hint');
-  const status = document.getElementById('status');
-  const btn = document.getElementById('closeTap');
-  let solved = false;
+  <script>
+    const loader = document.getElementById('loader');
+    const hint = document.getElementById('hint');
+    const controls = document.getElementById('controls');
+    const question = document.getElementById('question');
+    const button = document.getElementById('closeTap');
+    const success = document.getElementById('success');
+    const status = document.getElementById('status');
+    const target = document.getElementById('bathroomTarget');
+    const video = document.getElementById('waterVideo');
+    const plane = document.getElementById('waterPlane');
+    const scene = document.querySelector('a-scene');
 
-  const hideLoader = () => {
-    if (loader) loader.style.display = 'none';
-    status.textContent = 'камера готова — ищем метку';
-  };
+    let solved = false;
 
-  // Основной способ
-  if (scene) {
-    scene.addEventListener('loaded', () => {
-      setTimeout(hideLoader, 1200);
-    });
-  }
+    const hideLoader = () => {
+      loader.style.display = 'none';
+      status.textContent = 'камера готова — ищем ванную';
+    };
 
-  // Резервный способ, чтобы белый экран точно не зависал
-  setTimeout(hideLoader, 4000);
+    scene.addEventListener('arReady', hideLoader);
+    setTimeout(hideLoader, 4500);
 
-  marker.addEventListener('markerFound', async () => {
-    status.textContent = 'метка найдена';
-    hint.textContent = 'Нарушение найдено!';
-    if (!solved) {
-      controls.style.display = 'flex';
-      plane.setAttribute('visible','true');
-      try {
-        video.currentTime = 0;
-        await video.play();
-      } catch(e) {
-        status.textContent = 'метка найдена';
+    target.addEventListener('targetFound', async () => {
+      hint.textContent = 'Нарушение найдено!';
+      status.textContent = 'ванная распознана';
+      controls.style.display = 'block';
+
+      if (!solved) {
+        question.style.display = 'block';
+        button.style.display = 'inline-block';
+        success.style.display = 'none';
+        plane.setAttribute('visible', 'true');
+        try {
+          video.currentTime = 0;
+          await video.play();
+        } catch (e) {
+          status.textContent = 'ванная распознана — коснитесь экрана';
+        }
       }
-    }
-  });
+    });
 
-  marker.addEventListener('markerLost', () => {
-    status.textContent = 'ищем метку';
-    hint.textContent = 'Снова наведите камеру на метку Hiro';
-    if (!solved) controls.style.display = 'none';
-    video.pause();
-  });
+    target.addEventListener('targetLost', () => {
+      hint.textContent = 'Наведите камеру на картинку ванной';
+      status.textContent = 'ищем ванную';
+      controls.style.display = 'none';
+      video.pause();
+      plane.setAttribute('visible', 'false');
+      solved = false;
+      question.style.display = 'block';
+      button.style.display = 'inline-block';
+      success.style.display = 'none';
+    });
 
-  btn.addEventListener('click', () => {
-    solved = true;
-    video.pause();
-    plane.setAttribute('visible','false');
-    controls.style.display='none';
-    success.style.display='flex';
-    hint.textContent='Миссия выполнена';
-    status.textContent='вода спасена';
-    setTimeout(() => success.style.display='none', 2600);
-  });
-});
-</script>
+    button.addEventListener('click', () => {
+      solved = true;
+      video.pause();
+      plane.setAttribute('visible', 'false');
+      question.style.display = 'none';
+      button.style.display = 'none';
+      success.style.display = 'block';
+      hint.textContent = 'Вода спасена!';
+      status.textContent = 'задание выполнено';
+    });
+
+    document.body.addEventListener('click', async () => {
+      if (!solved && plane.getAttribute('visible')) {
+        try { await video.play(); } catch (e) {}
+      }
+    }, { passive: true });
+  </script>
 </body>
 </html>
