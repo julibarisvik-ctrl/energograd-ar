@@ -88,23 +88,23 @@
       z-index: 60;
       overflow-y: auto;
       padding:
-        max(18px, env(safe-area-inset-top))
-        16px
-        max(18px, env(safe-area-inset-bottom));
+  max(8px, env(safe-area-inset-top))
+  16px
+  max(18px, env(safe-area-inset-bottom));
       background: rgba(5,23,32,.62);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
     }
 
-    .game-shell {
-      width: min(100%, 520px);
-      min-height: 100%;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 12px;
-    }
+   .game-shell {
+  width: min(100%, 520px);
+  min-height: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 12px;
+  padding-top: 6px;
 
     .game-head {
       display: flex;
