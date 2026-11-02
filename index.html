@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#0f2f3d" />
-  <title>Энергоград — Ванная</title>
+  <title>Энергоград — Умный дом</title>
 
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -153,8 +153,8 @@
       box-shadow: 0 16px 40px rgba(0,0,0,.28);
     }
 
-    #waterVideo,
-    #bathroomStill {
+    #roomVideo,
+    #roomStill {
       position: absolute;
       inset: 0;
       width: 100%;
@@ -162,7 +162,7 @@
       object-fit: cover;
     }
 
-    #bathroomStill {
+    #roomStill {
       display: none;
     }
 
@@ -258,8 +258,8 @@
   <div id="loader">Запускаем камеру…<br>Разрешите доступ к камере.</div>
 
   <div id="scanUI">
-    <div class="title-pill">Энергоград · Ванная</div>
-    <div class="scan-hint" id="scanHint">Наведите камеру на картинку ванной</div>
+    <div class="title-pill">Энергоград · Умный дом</div>
+    <div class="scan-hint" id="scanHint">Наведите камеру на комнату дома</div>
   </div>
 
   <div id="status">запускаем камеру…</div>
@@ -267,34 +267,32 @@
   <div id="gameOverlay">
     <div class="game-shell">
       <div class="game-head">
-        <div class="room-name">🚿 Ванная комната</div>
+        <div class="room-name">Комната</div>
         <button class="close-game" id="closeGame" aria-label="Закрыть">×</button>
       </div>
 
       <div class="media-card">
         <div class="found-badge" id="foundBadge">⚠ Нарушение найдено!</div>
         <video
-          id="waterVideo"
-          src="./assets/water.mp4"
+          id="roomVideo"
           preload="auto"
           loop
           muted
           playsinline
           webkit-playsinline></video>
         <img
-          id="bathroomStill"
-          src="./assets/bathroom.png"
-          alt="Ванная комната" />
+          id="roomStill"
+          alt="Комната" />
       </div>
 
       <div class="task-card" id="taskCard">
-        Ой! Вода убегает.<br>Что нужно сделать?
+        Нарушение найдено.<br>Что нужно сделать?
       </div>
 
-      <button id="closeTap">Закрыть кран</button>
+      <button id="closeTap">Исправить</button>
 
       <div class="success-card" id="successCard">
-        ✓ Отлично! Вода спасена! 💧⚡
+        ✓ Отлично! Нарушение устранено! ⚡
       </div>
 
       <button id="scanAgain">Вернуться к поиску</button>
@@ -311,6 +309,7 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
     <a-entity id="bathroomTarget" mindar-image-target="targetIndex: 0"></a-entity>
+    <a-entity id="kitchenTarget" mindar-image-target="targetIndex: 1"></a-entity>
   </a-scene>
 
   <script>
@@ -320,37 +319,83 @@
     const status = document.getElementById('status');
 
     const gameOverlay = document.getElementById('gameOverlay');
-    const target = document.getElementById('bathroomTarget');
     const scene = document.querySelector('a-scene');
 
-    const video = document.getElementById('waterVideo');
-    const still = document.getElementById('bathroomStill');
+    const bathroomTarget = document.getElementById('bathroomTarget');
+    const kitchenTarget = document.getElementById('kitchenTarget');
+
+    const roomVideo = document.getElementById('roomVideo');
+    const roomStill = document.getElementById('roomStill');
     const taskCard = document.getElementById('taskCard');
-    const closeTap = document.getElementById('closeTap');
+    const actionButton = document.getElementById('closeTap');
     const successCard = document.getElementById('successCard');
     const scanAgain = document.getElementById('scanAgain');
     const closeGame = document.getElementById('closeGame');
     const foundBadge = document.getElementById('foundBadge');
+    const roomName = document.querySelector('.room-name');
+
+    const rooms = {
+      bathroom: {
+        name: '🚿 Ванная комната',
+        video: './assets/water.mp4',
+        still: './assets/bathroom.png',
+        question: 'Ой! Вода убегает.<br>Что нужно сделать?',
+        button: 'Закрыть кран',
+        found: '⚠ Нарушение найдено!',
+        solvedBadge: '✓ Кран закрыт',
+        success: '✓ Отлично! Вода спасена! 💧⚡',
+        statusFound: 'ванная распознана'
+      },
+      kitchen: {
+        name: '🧊 Кухня',
+        video: './assets/fridge.mp4',
+        still: './assets/kitchen.png',
+        question: 'Ой! Холод убегает.<br>Что нужно сделать?',
+        button: 'Закрыть холодильник',
+        found: '⚠ Нарушение найдено!',
+        solvedBadge: '✓ Холодильник закрыт',
+        success: '✓ Отлично! Холод сохранён! ❄️⚡',
+        statusFound: 'кухня распознана'
+      }
+    };
 
     let gameOpen = false;
     let solved = false;
+    let currentRoom = null;
 
     const hideLoader = () => {
       loader.style.display = 'none';
-      status.textContent = 'камера готова — ищем ванную';
+      status.textContent = 'камера готова — ищем комнату';
+    };
+
+    const prepareRoom = (key) => {
+      const room = rooms[key];
+      currentRoom = key;
+
+      roomName.textContent = room.name;
+      taskCard.innerHTML = room.question;
+      actionButton.textContent = room.button;
+      successCard.textContent = room.success;
+      foundBadge.textContent = room.found;
+
+      roomVideo.src = room.video;
+      roomStill.src = room.still;
+      roomStill.alt = room.name.replace(/^[^A-Za-zА-Яа-яЁё]+/, '').trim();
     };
 
     const resetGame = () => {
       solved = false;
       gameOpen = false;
+      currentRoom = null;
 
-      video.pause();
-      video.currentTime = 0;
-      video.style.display = 'block';
-      still.style.display = 'none';
+      roomVideo.pause();
+      roomVideo.removeAttribute('src');
+      roomVideo.load();
+      roomVideo.style.display = 'block';
+      roomStill.style.display = 'none';
 
       taskCard.style.display = 'block';
-      closeTap.style.display = 'block';
+      actionButton.style.display = 'block';
       successCard.style.display = 'none';
       scanAgain.style.display = 'none';
       foundBadge.textContent = '⚠ Нарушение найдено!';
@@ -358,26 +403,30 @@
       gameOverlay.scrollTop = 0;
       gameOverlay.style.display = 'none';
       scanUI.style.display = 'block';
-      scanHint.textContent = 'Наведите камеру на картинку ванной';
-      status.textContent = 'камера готова — ищем ванную';
+      scanHint.textContent = 'Наведите камеру на комнату дома';
+      status.textContent = 'камера готова — ищем комнату';
     };
 
-    const openGame = async () => {
+    const openGame = async (key) => {
       if (gameOpen) return;
+
+      prepareRoom(key);
+      const room = rooms[key];
+
       gameOpen = true;
       solved = false;
 
       scanUI.style.display = 'none';
       gameOverlay.style.display = 'block';
       gameOverlay.scrollTop = 0;
-      status.textContent = 'ванная распознана';
+      status.textContent = room.statusFound;
 
-      video.style.display = 'block';
-      still.style.display = 'none';
-      video.currentTime = 0;
+      roomVideo.style.display = 'block';
+      roomStill.style.display = 'none';
+      roomVideo.currentTime = 0;
 
       try {
-        await video.play();
+        await roomVideo.play();
       } catch (e) {
         foundBadge.textContent = '⚠ Нарушение найдено! Нажмите на картинку';
       }
@@ -386,33 +435,38 @@
     scene.addEventListener('arReady', hideLoader);
     setTimeout(hideLoader, 4500);
 
-    target.addEventListener('targetFound', openGame);
+    bathroomTarget.addEventListener('targetFound', () => openGame('bathroom'));
+    kitchenTarget.addEventListener('targetFound', () => openGame('kitchen'));
 
-    target.addEventListener('targetLost', () => {
-      if (!gameOpen) {
-        status.textContent = 'ищем ванную';
-      }
+    bathroomTarget.addEventListener('targetLost', () => {
+      if (!gameOpen) status.textContent = 'ищем комнату';
     });
 
-    closeTap.addEventListener('click', () => {
-      solved = true;
+    kitchenTarget.addEventListener('targetLost', () => {
+      if (!gameOpen) status.textContent = 'ищем комнату';
+    });
 
-      video.pause();
-      video.style.display = 'none';
-      still.style.display = 'block';
+    actionButton.addEventListener('click', () => {
+      if (!currentRoom) return;
+      const room = rooms[currentRoom];
+
+      solved = true;
+      roomVideo.pause();
+      roomVideo.style.display = 'none';
+      roomStill.style.display = 'block';
 
       taskCard.style.display = 'none';
-      closeTap.style.display = 'none';
+      actionButton.style.display = 'none';
       successCard.style.display = 'block';
       scanAgain.style.display = 'block';
 
-      foundBadge.textContent = '✓ Кран закрыт';
+      foundBadge.textContent = room.solvedBadge;
       status.textContent = 'задание выполнено';
     });
 
-    video.addEventListener('click', async () => {
+    roomVideo.addEventListener('click', async () => {
       if (!solved) {
-        try { await video.play(); } catch (e) {}
+        try { await roomVideo.play(); } catch (e) {}
       }
     });
 
