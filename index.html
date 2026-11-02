@@ -87,7 +87,7 @@
       inset: 0;
       z-index: 60;
       overflow-y: auto;
-      padding: 8px 16px 18px;
+      padding: 18px 16px 18px;
       background: rgba(5,23,32,.62);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
@@ -111,6 +111,9 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 12;
     }
 
     .room-name {
@@ -352,6 +355,7 @@
       scanAgain.style.display = 'none';
       foundBadge.textContent = '⚠ Нарушение найдено!';
 
+      gameOverlay.scrollTop = 0;
       gameOverlay.style.display = 'none';
       scanUI.style.display = 'block';
       scanHint.textContent = 'Наведите камеру на картинку ванной';
@@ -365,6 +369,7 @@
 
       scanUI.style.display = 'none';
       gameOverlay.style.display = 'block';
+      gameOverlay.scrollTop = 0;
       status.textContent = 'ванная распознана';
 
       video.style.display = 'block';
