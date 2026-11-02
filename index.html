@@ -428,7 +428,7 @@
   </div>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-final-20261102-1; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-final-20261102-2; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
     embedded
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
@@ -735,18 +735,13 @@
       scanHint.textContent = 'Наведите камеру на комнату дома';
       status.textContent = 'камера готова — ищем комнату';
 
-      // Пользовательский тап помогает браузеру разрешить воспроизведение видео.
-      roomKeys.forEach(key => {
-        try {
-          const p = videos[key].play();
-          if (p && p.then) {
-            p.then(() => {
-              videos[key].pause();
-              videos[key].currentTime = 0;
-            }).catch(() => {});
-          }
-        } catch (e) {}
-      });
+      // Если MindAR уже увидел комнату, пока был открыт стартовый экран,
+      // запускаем её сразу — не ждём повторного targetFound.
+      const alreadyVisible = roomKeys.find(key => visibleTargets[key]);
+
+      if (alreadyVisible) {
+        setTimeout(() => openGame(alreadyVisible), 150);
+      }
     });
 
     roomKeys.forEach(key => {
