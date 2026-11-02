@@ -11,6 +11,7 @@
 
   <style>
     * { box-sizing: border-box; }
+
     html, body {
       margin: 0;
       width: 100%;
@@ -71,7 +72,7 @@
       bottom: max(28px, env(safe-area-inset-bottom));
       padding: 14px 18px;
       border-radius: 22px;
-      color: white;
+      color: #fff;
       background: rgba(20,71,91,.88);
       box-shadow: 0 8px 25px rgba(0,0,0,.18);
       text-align: center;
@@ -272,27 +273,31 @@
 
         <video id="bathroomVideo" class="room-media"
           src="./assets/water.mp4"
-          preload="auto"
-          loop
-          muted
-          playsinline
-          webkit-playsinline></video>
+          preload="auto" loop muted playsinline webkit-playsinline></video>
 
         <video id="kitchenVideo" class="room-media"
           src="./assets/fridge.mp4"
-          preload="auto"
-          loop
-          muted
-          playsinline
-          webkit-playsinline></video>
+          preload="auto" loop muted playsinline webkit-playsinline></video>
+
+        <video id="livingroomVideo" class="room-media"
+          src="./assets/tvlight.mp4"
+          preload="auto" loop muted playsinline webkit-playsinline></video>
+
+        <video id="bedroomVideo" class="room-media"
+          src="./assets/window.mp4"
+          preload="auto" loop muted playsinline webkit-playsinline></video>
 
         <img id="bathroomStill" class="room-media"
-          src="./assets/bathroom.png"
-          alt="Ванная комната" />
+          src="./assets/bathroom.png" alt="Ванная комната" />
 
         <img id="kitchenStill" class="room-media"
-          src="./assets/kitchen.png"
-          alt="Кухня" />
+          src="./assets/kitchen.png" alt="Кухня" />
+
+        <img id="livingroomStill" class="room-media"
+          src="./assets/livingroom.png" alt="Гостиная" />
+
+        <img id="bedroomStill" class="room-media"
+          src="./assets/bedroom.png" alt="Спальня" />
       </div>
 
       <div class="task-card" id="taskCard">
@@ -321,6 +326,8 @@
 
     <a-entity id="bathroomTarget" mindar-image-target="targetIndex: 0"></a-entity>
     <a-entity id="kitchenTarget" mindar-image-target="targetIndex: 1"></a-entity>
+    <a-entity id="livingroomTarget" mindar-image-target="targetIndex: 2"></a-entity>
+    <a-entity id="bedroomTarget" mindar-image-target="targetIndex: 3"></a-entity>
   </a-scene>
 
   <script>
@@ -331,13 +338,26 @@
     const gameOverlay = document.getElementById('gameOverlay');
     const scene = document.querySelector('a-scene');
 
-    const bathroomTarget = document.getElementById('bathroomTarget');
-    const kitchenTarget = document.getElementById('kitchenTarget');
+    const targets = {
+      bathroom: document.getElementById('bathroomTarget'),
+      kitchen: document.getElementById('kitchenTarget'),
+      livingroom: document.getElementById('livingroomTarget'),
+      bedroom: document.getElementById('bedroomTarget')
+    };
 
-    const bathroomVideo = document.getElementById('bathroomVideo');
-    const kitchenVideo = document.getElementById('kitchenVideo');
-    const bathroomStill = document.getElementById('bathroomStill');
-    const kitchenStill = document.getElementById('kitchenStill');
+    const videos = {
+      bathroom: document.getElementById('bathroomVideo'),
+      kitchen: document.getElementById('kitchenVideo'),
+      livingroom: document.getElementById('livingroomVideo'),
+      bedroom: document.getElementById('bedroomVideo')
+    };
+
+    const stills = {
+      bathroom: document.getElementById('bathroomStill'),
+      kitchen: document.getElementById('kitchenStill'),
+      livingroom: document.getElementById('livingroomStill'),
+      bedroom: document.getElementById('bedroomStill')
+    };
 
     const taskCard = document.getElementById('taskCard');
     const actionButton = document.getElementById('actionButton');
@@ -350,8 +370,6 @@
     const rooms = {
       bathroom: {
         name: '🚿 Ванная комната',
-        videoEl: bathroomVideo,
-        stillEl: bathroomStill,
         question: 'Ой! Вода убегает.<br>Что нужно сделать?',
         button: 'Закрыть кран',
         solvedBadge: '✓ Кран закрыт',
@@ -360,19 +378,35 @@
       },
       kitchen: {
         name: '🧊 Кухня',
-        videoEl: kitchenVideo,
-        stillEl: kitchenStill,
         question: 'Ой! Холод убегает.<br>Что нужно сделать?',
         button: 'Закрыть холодильник',
         solvedBadge: '✓ Холодильник закрыт',
         success: '✓ Отлично! Холод сохранён! ❄️⚡',
         statusFound: 'кухня распознана'
+      },
+      livingroom: {
+        name: '📺 Гостиная',
+        question: 'Ой! В пустой комнате работают телевизор и свет.<br>Что нужно сделать?',
+        button: 'Выключить всё',
+        solvedBadge: '✓ Всё выключено',
+        success: '✓ Отлично! Электроэнергия сбережена! 💡⚡',
+        statusFound: 'гостиная распознана'
+      },
+      bedroom: {
+        name: '🛏️ Спальня',
+        question: 'Ой! Тепло уходит через открытое окно.<br>Что нужно сделать?',
+        button: 'Закрыть окно',
+        solvedBadge: '✓ Окно закрыто',
+        success: '✓ Отлично! Тепло осталось в доме! 🏠⚡',
+        statusFound: 'спальня распознана'
       }
     };
 
     const visibleTargets = {
       bathroom: false,
-      kitchen: false
+      kitchen: false,
+      livingroom: false,
+      bedroom: false
     };
 
     let gameOpen = false;
@@ -380,13 +414,13 @@
     let currentRoom = null;
     let blockedRoom = null;
 
+    const roomKeys = Object.keys(rooms);
+
     const hideAllMedia = () => {
-      [bathroomVideo, kitchenVideo].forEach(v => {
-        v.pause();
-        v.style.display = 'none';
-      });
-      [bathroomStill, kitchenStill].forEach(i => {
-        i.style.display = 'none';
+      roomKeys.forEach(key => {
+        videos[key].pause();
+        videos[key].style.display = 'none';
+        stills[key].style.display = 'none';
       });
     };
 
@@ -407,8 +441,13 @@
 
       hideAllMedia();
 
-      room.videoEl.currentTime = 0;
-      room.videoEl.style.display = 'block';
+      videos[key].currentTime = 0;
+      videos[key].style.display = 'block';
+
+      taskCard.style.display = 'block';
+      actionButton.style.display = 'block';
+      successCard.style.display = 'none';
+      scanAgain.style.display = 'none';
     };
 
     const openGame = async (key) => {
@@ -416,7 +455,6 @@
       if (blockedRoom === key) return;
 
       prepareRoom(key);
-      const room = rooms[key];
 
       gameOpen = true;
       solved = false;
@@ -424,10 +462,10 @@
       scanUI.style.display = 'none';
       gameOverlay.style.display = 'block';
       gameOverlay.scrollTop = 0;
-      status.textContent = room.statusFound;
+      status.textContent = rooms[key].statusFound;
 
       try {
-        await room.videoEl.play();
+        await videos[key].play();
       } catch (e) {
         foundBadge.textContent = '⚠ Нарушение найдено! Коснитесь картинки';
       }
@@ -454,75 +492,72 @@
       scanHint.textContent = 'Наведите камеру на другую комнату дома';
       status.textContent = 'камера готова — ищем другую комнату';
 
-      // Не открываем ту же комнату повторно, пока камера не потеряет её.
       blockedRoom = previousRoom;
 
-      // Если в кадре уже есть другая комната, открываем её сразу.
-      const otherRoom = previousRoom === 'bathroom' ? 'kitchen' : 'bathroom';
-      if (visibleTargets[otherRoom]) {
-        setTimeout(() => openGame(otherRoom), 150);
+      // Если при выходе уже видна какая-то другая мишень, открываем её.
+      const alreadyVisibleOther = roomKeys.find(
+        key => key !== previousRoom && visibleTargets[key]
+      );
+
+      if (alreadyVisibleOther) {
+        setTimeout(() => openGame(alreadyVisibleOther), 150);
       }
     };
 
     const solveCurrentRoom = () => {
       if (!currentRoom) return;
 
-      const room = rooms[currentRoom];
       solved = true;
 
-      room.videoEl.pause();
-      room.videoEl.style.display = 'none';
-      room.stillEl.style.display = 'block';
+      videos[currentRoom].pause();
+      videos[currentRoom].style.display = 'none';
+      stills[currentRoom].style.display = 'block';
 
       taskCard.style.display = 'none';
       actionButton.style.display = 'none';
       successCard.style.display = 'block';
       scanAgain.style.display = 'block';
 
-      foundBadge.textContent = room.solvedBadge;
+      foundBadge.textContent = rooms[currentRoom].solvedBadge;
       status.textContent = 'задание выполнено';
     };
 
     scene.addEventListener('arReady', hideLoader);
     setTimeout(hideLoader, 4500);
 
-    bathroomTarget.addEventListener('targetFound', () => {
-      visibleTargets.bathroom = true;
-      if (!gameOpen && blockedRoom !== 'bathroom') {
-        openGame('bathroom');
-      }
-    });
+    roomKeys.forEach(key => {
+      targets[key].addEventListener('targetFound', () => {
+        visibleTargets[key] = true;
 
-    kitchenTarget.addEventListener('targetFound', () => {
-      visibleTargets.kitchen = true;
-      if (!gameOpen && blockedRoom !== 'kitchen') {
-        openGame('kitchen');
-      }
-    });
+        if (!gameOpen && blockedRoom !== key) {
+          openGame(key);
+        }
+      });
 
-    bathroomTarget.addEventListener('targetLost', () => {
-      visibleTargets.bathroom = false;
-      if (blockedRoom === 'bathroom') blockedRoom = null;
-      if (!gameOpen) status.textContent = 'ищем комнату';
-    });
+      targets[key].addEventListener('targetLost', () => {
+        visibleTargets[key] = false;
 
-    kitchenTarget.addEventListener('targetLost', () => {
-      visibleTargets.kitchen = false;
-      if (blockedRoom === 'kitchen') blockedRoom = null;
-      if (!gameOpen) status.textContent = 'ищем комнату';
+        if (blockedRoom === key) {
+          blockedRoom = null;
+        }
+
+        if (!gameOpen) {
+          status.textContent = 'ищем комнату';
+        }
+      });
+
+      videos[key].addEventListener('click', async () => {
+        if (!solved) {
+          try {
+            await videos[key].play();
+          } catch (e) {}
+        }
+      });
     });
 
     actionButton.addEventListener('click', solveCurrentRoom);
     scanAgain.addEventListener('click', resetGame);
     closeGame.addEventListener('click', resetGame);
-
-    [bathroomVideo, kitchenVideo].forEach(video => {
-      video.addEventListener('click', async () => {
-        if (!solved) {
-          try { await video.play(); } catch (e) {}
-        }
-      });
-    });
   </script>
 </body>
 </html>
