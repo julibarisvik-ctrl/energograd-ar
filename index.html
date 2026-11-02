@@ -430,7 +430,7 @@
   <audio id="voiceAudio" src="./assets/intro.mp3" preload="auto" playsinline></audio>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-audio-20261102-2; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-audio-sequenced-20261102-1; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
     embedded
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
@@ -550,6 +550,7 @@
     let blockedRoom = null;
     let missionStarted = false;
     let introSpeaking = false;
+    let transitionSpeaking = false;
     let voiceRunId = 0;
 
     const playVoice = (src, onEnded = null) => {
@@ -655,7 +656,7 @@
     };
 
     const openGame = async (key) => {
-      if (!missionStarted || introSpeaking || gameOpen) return;
+      if (!missionStarted || introSpeaking || transitionSpeaking || gameOpen) return;
       if (blockedRoom === key) return;
 
       if (completedRooms.has(key)) {
@@ -685,6 +686,9 @@
     const returnToSearch = () => {
       const previousRoom = currentRoom;
 
+      // Пока не закончилась реплика-переход, второй раз кнопку не обрабатываем.
+      if (transitionSpeaking) return;
+
       solved = false;
       gameOpen = false;
       currentRoom = null;
@@ -710,20 +714,29 @@
 
       scanUI.style.display = 'block';
       updateProgress();
-      scanHint.textContent = 'Найдите следующую комнату дома';
-      status.textContent = 'ищем следующее нарушение';
-      playVoice('./assets/next.mp3');
+      scanHint.textContent = 'Слушаем Энергошу…';
+      status.textContent = 'готовимся искать следующее нарушение';
 
-      const alreadyVisibleOther = roomKeys.find(
-        key =>
-          key !== previousRoom &&
-          visibleTargets[key] &&
-          !completedRooms.has(key)
-      );
+      transitionSpeaking = true;
 
-      if (alreadyVisibleOther) {
-        setTimeout(() => openGame(alreadyVisibleOther), 180);
-      }
+      playVoice('./assets/next.mp3', () => {
+        transitionSpeaking = false;
+        scanHint.textContent = 'Найдите следующую комнату дома';
+        status.textContent = 'ищем следующее нарушение';
+
+        // Если следующая картинка уже в кадре, открываем её только
+        // после окончания реплики Энергоши.
+        const alreadyVisibleOther = roomKeys.find(
+          key =>
+            key !== previousRoom &&
+            visibleTargets[key] &&
+            !completedRooms.has(key)
+        );
+
+        if (alreadyVisibleOther) {
+          setTimeout(() => openGame(alreadyVisibleOther), 120);
+        }
+      });
     };
 
     const solveCurrentRoom = () => {
@@ -740,18 +753,31 @@
       taskCard.style.display = 'none';
       actionButton.style.display = 'none';
       successCard.style.display = 'block';
-      scanAgain.style.display = 'block';
+
+      // Не даём уйти в следующую комнату, пока не прозвучала похвала.
+      scanAgain.style.display = 'none';
+      closeGame.disabled = true;
+      closeGame.style.opacity = '0.35';
+      closeGame.style.pointerEvents = 'none';
 
       foundBadge.textContent = rooms[currentRoom].solvedBadge;
-      playVoice(rooms[currentRoom].successAudio);
+      status.textContent = 'Энергоша отвечает…';
 
-      if (completedRooms.size >= 4) {
-        scanAgain.textContent = 'Завершить миссию';
-        status.textContent = 'все 4 нарушения устранены';
-      } else {
-        scanAgain.textContent = 'Искать следующее нарушение';
-        status.textContent = `выполнено ${completedRooms.size} из 4`;
-      }
+      playVoice(rooms[currentRoom].successAudio, () => {
+        closeGame.disabled = false;
+        closeGame.style.opacity = '';
+        closeGame.style.pointerEvents = '';
+
+        if (completedRooms.size >= 4) {
+          scanAgain.textContent = 'Завершить миссию';
+          status.textContent = 'все 4 нарушения устранены';
+        } else {
+          scanAgain.textContent = 'Искать следующее нарушение';
+          status.textContent = `выполнено ${completedRooms.size} из 4`;
+        }
+
+        scanAgain.style.display = 'block';
+      });
     };
 
     const restartGame = () => {
@@ -764,6 +790,11 @@
       currentRoom = null;
       blockedRoom = null;
       missionStarted = true;
+      transitionSpeaking = false;
+
+      closeGame.disabled = false;
+      closeGame.style.opacity = '';
+      closeGame.style.pointerEvents = '';
 
       hideAllMedia();
 
