@@ -427,8 +427,10 @@
     </div>
   </div>
 
+  <audio id="voiceAudio" preload="auto"></audio>
+
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-final-20261102-2; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-audio-20261102-1; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
     embedded
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
@@ -457,6 +459,7 @@
 
     const gameOverlay = document.getElementById('gameOverlay');
     const scene = document.querySelector('a-scene');
+    const voiceAudio = document.getElementById('voiceAudio');
 
     const targets = {
       bathroom: document.getElementById('bathroomTarget'),
@@ -494,7 +497,9 @@
         button: 'Закрыть кран',
         solvedBadge: '✓ Кран закрыт',
         success: '✓ Отлично! Вода спасена! 💧⚡',
-        statusFound: 'ванная распознана'
+        statusFound: 'ванная распознана',
+        problemAudio: './assets/bathroom_problem.mp3',
+        successAudio: './assets/bathroom_success.mp3'
       },
       kitchen: {
         name: '🧊 Кухня',
@@ -502,7 +507,9 @@
         button: 'Закрыть холодильник',
         solvedBadge: '✓ Холодильник закрыт',
         success: '✓ Отлично! Холод сохранён! ❄️⚡',
-        statusFound: 'кухня распознана'
+        statusFound: 'кухня распознана',
+        problemAudio: './assets/kitchen_problem.mp3',
+        successAudio: './assets/kitchen_success.mp3'
       },
       livingroom: {
         name: '📺 Гостиная',
@@ -510,7 +517,9 @@
         button: 'Выключить всё',
         solvedBadge: '✓ Всё выключено',
         success: '✓ Отлично! Электроэнергия сбережена! 💡⚡',
-        statusFound: 'гостиная распознана'
+        statusFound: 'гостиная распознана',
+        problemAudio: './assets/livingroom_problem.mp3',
+        successAudio: './assets/livingroom_success.mp3'
       },
       bedroom: {
         name: '🛏️ Спальня',
@@ -518,7 +527,9 @@
         button: 'Закрыть окно',
         solvedBadge: '✓ Окно закрыто',
         success: '✓ Отлично! Тепло осталось в доме! 🏠⚡',
-        statusFound: 'спальня распознана'
+        statusFound: 'спальня распознана',
+        problemAudio: './assets/bedroom_problem.mp3',
+        successAudio: './assets/bedroom_success.mp3'
       }
     };
 
@@ -538,6 +549,45 @@
     let currentRoom = null;
     let blockedRoom = null;
     let missionStarted = false;
+    let introSpeaking = false;
+    let voiceRunId = 0;
+
+    const playVoice = (src, onEnded = null) => {
+      voiceRunId += 1;
+      const thisRun = voiceRunId;
+
+      try {
+        voiceAudio.pause();
+        voiceAudio.currentTime = 0;
+        voiceAudio.src = src;
+        voiceAudio.load();
+
+        const finish = () => {
+          if (thisRun !== voiceRunId) return;
+          voiceAudio.onended = null;
+          voiceAudio.onerror = null;
+          if (onEnded) onEnded();
+        };
+
+        voiceAudio.onended = finish;
+        voiceAudio.onerror = finish;
+
+        const p = voiceAudio.play();
+        if (p && p.catch) {
+          p.catch(() => finish());
+        }
+      } catch (e) {
+        if (onEnded) onEnded();
+      }
+    };
+
+    const stopVoice = () => {
+      voiceRunId += 1;
+      try {
+        voiceAudio.pause();
+        voiceAudio.currentTime = 0;
+      } catch (e) {}
+    };
 
     const updateProgress = () => {
       progressPill.textContent = `Найдено: ${completedRooms.size} из 4`;
@@ -586,6 +636,7 @@
     const showAlreadyCompleted = (key) => {
       scanHint.textContent = `${rooms[key].name.replace(/^[^А-Яа-яЁёA-Za-z]+/, '')}: уже проверено ✓`;
       status.textContent = 'эта комната уже выполнена';
+      playVoice('./assets/completed.mp3');
 
       setTimeout(() => {
         if (!gameOpen && missionStarted) {
@@ -596,7 +647,7 @@
     };
 
     const openGame = async (key) => {
-      if (!missionStarted || gameOpen) return;
+      if (!missionStarted || introSpeaking || gameOpen) return;
       if (blockedRoom === key) return;
 
       if (completedRooms.has(key)) {
@@ -619,6 +670,8 @@
       } catch (e) {
         foundBadge.textContent = '⚠ Нарушение найдено! Коснитесь картинки';
       }
+
+      playVoice(rooms[key].problemAudio);
     };
 
     const returnToSearch = () => {
@@ -643,6 +696,7 @@
         scanUI.style.display = 'none';
         finalOverlay.style.display = 'flex';
         status.textContent = 'миссия выполнена';
+        playVoice('./assets/final.mp3');
         return;
       }
 
@@ -650,6 +704,7 @@
       updateProgress();
       scanHint.textContent = 'Найдите следующую комнату дома';
       status.textContent = 'ищем следующее нарушение';
+      playVoice('./assets/next.mp3');
 
       const alreadyVisibleOther = roomKeys.find(
         key =>
@@ -680,6 +735,7 @@
       scanAgain.style.display = 'block';
 
       foundBadge.textContent = rooms[currentRoom].solvedBadge;
+      playVoice(rooms[currentRoom].successAudio);
 
       if (completedRooms.size >= 4) {
         scanAgain.textContent = 'Завершить миссию';
@@ -691,6 +747,7 @@
     };
 
     const restartGame = () => {
+      stopVoice();
       completedRooms.clear();
       updateProgress();
 
@@ -729,19 +786,28 @@
 
     startMission.addEventListener('click', () => {
       missionStarted = true;
+      introSpeaking = true;
       introOverlay.style.display = 'none';
       scanUI.style.display = 'block';
       updateProgress();
-      scanHint.textContent = 'Наведите камеру на комнату дома';
-      status.textContent = 'камера готова — ищем комнату';
+      scanHint.textContent = 'Слушаем Энергошу…';
+      status.textContent = 'миссия начинается';
 
-      // Если MindAR уже увидел комнату, пока был открыт стартовый экран,
-      // запускаем её сразу — не ждём повторного targetFound.
-      const alreadyVisible = roomKeys.find(key => visibleTargets[key]);
+      playVoice('./assets/intro.mp3', () => {
+        introSpeaking = false;
+        scanHint.textContent = 'Наведите камеру на комнату дома';
+        status.textContent = 'камера готова — ищем комнату';
 
-      if (alreadyVisible) {
-        setTimeout(() => openGame(alreadyVisible), 150);
-      }
+        // Если MindAR уже увидел комнату во время приветствия,
+        // запускаем её сразу после окончания реплики.
+        const alreadyVisible = roomKeys.find(
+          key => visibleTargets[key] && !completedRooms.has(key)
+        );
+
+        if (alreadyVisible) {
+          setTimeout(() => openGame(alreadyVisible), 120);
+        }
+      });
     });
 
     roomKeys.forEach(key => {
