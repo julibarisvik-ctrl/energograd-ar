@@ -427,10 +427,10 @@
     </div>
   </div>
 
-  <audio id="voiceAudio" preload="auto"></audio>
+  <audio id="voiceAudio" src="./assets/intro.mp3" preload="auto" playsinline></audio>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-audio-20261102-1; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-audio-20261102-2; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
     embedded
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
@@ -559,8 +559,8 @@
       try {
         voiceAudio.pause();
         voiceAudio.currentTime = 0;
-        voiceAudio.src = src;
-        voiceAudio.load();
+        voiceAudio.muted = false;
+        voiceAudio.volume = 1;
 
         const finish = () => {
           if (thisRun !== voiceRunId) return;
@@ -571,6 +571,14 @@
 
         voiceAudio.onended = finish;
         voiceAudio.onerror = finish;
+
+        const requestedUrl = new URL(src, window.location.href).href;
+        const currentUrl = voiceAudio.currentSrc || voiceAudio.src;
+
+        if (currentUrl !== requestedUrl) {
+          voiceAudio.src = src;
+          voiceAudio.load();
+        }
 
         const p = voiceAudio.play();
         if (p && p.catch) {
@@ -793,13 +801,20 @@
       scanHint.textContent = 'Слушаем Энергошу…';
       status.textContent = 'миссия начинается';
 
-      playVoice('./assets/intro.mp3', () => {
+      // ВАЖНО: intro.mp3 уже указан в <audio>, поэтому play() вызывается
+      // прямо внутри пользовательского клика — это самый надёжный вариант
+      // для мобильных браузеров.
+      voiceRunId += 1;
+      const thisRun = voiceRunId;
+
+      const afterIntro = () => {
+        if (thisRun !== voiceRunId) return;
+        voiceAudio.onended = null;
+        voiceAudio.onerror = null;
         introSpeaking = false;
         scanHint.textContent = 'Наведите камеру на комнату дома';
         status.textContent = 'камера готова — ищем комнату';
 
-        // Если MindAR уже увидел комнату во время приветствия,
-        // запускаем её сразу после окончания реплики.
         const alreadyVisible = roomKeys.find(
           key => visibleTargets[key] && !completedRooms.has(key)
         );
@@ -807,7 +822,23 @@
         if (alreadyVisible) {
           setTimeout(() => openGame(alreadyVisible), 120);
         }
-      });
+      };
+
+      try {
+        voiceAudio.pause();
+        voiceAudio.currentTime = 0;
+        voiceAudio.muted = false;
+        voiceAudio.volume = 1;
+        voiceAudio.onended = afterIntro;
+        voiceAudio.onerror = afterIntro;
+
+        const p = voiceAudio.play();
+        if (p && p.catch) {
+          p.catch(() => afterIntro());
+        }
+      } catch (e) {
+        afterIntro();
+      }
     });
 
     roomKeys.forEach(key => {
