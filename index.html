@@ -273,19 +273,19 @@
 
         <video id="bathroomVideo" class="room-media"
           src="./assets/water.mp4"
-          preload="auto" loop muted playsinline webkit-playsinline></video>
+          preload="metadata" loop muted playsinline webkit-playsinline></video>
 
         <video id="kitchenVideo" class="room-media"
           src="./assets/fridge.mp4"
-          preload="auto" loop muted playsinline webkit-playsinline></video>
+          preload="metadata" loop muted playsinline webkit-playsinline></video>
 
         <video id="livingroomVideo" class="room-media"
           src="./assets/tvlight.mp4"
-          preload="auto" loop muted playsinline webkit-playsinline></video>
+          preload="metadata" loop muted playsinline webkit-playsinline></video>
 
         <video id="bedroomVideo" class="room-media"
           src="./assets/window.mp4"
-          preload="auto" loop muted playsinline webkit-playsinline></video>
+          preload="metadata" loop muted playsinline webkit-playsinline></video>
 
         <img id="bathroomStill" class="room-media"
           src="./assets/bathroom.png" alt="Ванная комната" />
@@ -315,7 +315,7 @@
   </div>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-20261102-1; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
     embedded
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
@@ -441,8 +441,11 @@
 
       hideAllMedia();
 
-      videos[key].currentTime = 0;
       videos[key].style.display = 'block';
+      try {
+        videos[key].load();
+        videos[key].currentTime = 0;
+      } catch (e) {}
 
       taskCard.style.display = 'block';
       actionButton.style.display = 'block';
@@ -523,7 +526,19 @@
     };
 
     scene.addEventListener('arReady', hideLoader);
-    setTimeout(hideLoader, 4500);
+
+    scene.addEventListener('arError', () => {
+      loader.style.display = 'none';
+      scanUI.style.display = 'block';
+      scanHint.textContent = 'Не удалось запустить камеру. Обновите страницу и разрешите доступ к камере.';
+      status.textContent = 'ошибка запуска AR';
+    });
+
+    setTimeout(() => {
+      if (loader.style.display !== 'none') {
+        hideLoader();
+      }
+    }, 4500);
 
     roomKeys.forEach(key => {
       targets[key].addEventListener('targetFound', () => {
