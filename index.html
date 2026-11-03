@@ -4,13 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#0f2f3d" />
-  <title>Энергоград — Умный дом Энергоши</title>
+  <title>Энергоград — Умный дом</title>
 
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
     * { box-sizing: border-box; }
+
     html, body {
       margin: 0;
       width: 100%;
@@ -42,78 +43,11 @@
       font-weight: 800;
     }
 
-    #introOverlay,
-    #finalOverlay {
-      position: fixed;
-      inset: 0;
-      z-index: 80;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 22px;
-      background: rgba(5,23,32,.78);
-      backdrop-filter: blur(9px);
-      -webkit-backdrop-filter: blur(9px);
-    }
-
-    .mission-card,
-    .final-card {
-      width: min(100%, 500px);
-      border-radius: 30px;
-      padding: 26px 22px;
-      color: #17384a;
-      background: rgba(255,255,255,.97);
-      box-shadow: 0 18px 50px rgba(0,0,0,.30);
-      text-align: center;
-    }
-
-    .mission-title,
-    .final-title {
-      margin: 0 0 12px;
-      font-size: clamp(28px, 8vw, 38px);
-      line-height: 1.05;
-      font-weight: 900;
-    }
-
-    .mission-text,
-    .final-text {
-      margin: 0 0 20px;
-      font-size: clamp(18px, 5vw, 23px);
-      line-height: 1.3;
-      font-weight: 700;
-    }
-
-    .mission-list {
-      margin: 0 0 22px;
-      padding: 0;
-      list-style: none;
-      display: grid;
-      gap: 9px;
-      text-align: left;
-      font-size: 18px;
-      font-weight: 700;
-    }
-
-    .primary-btn {
-      width: 100%;
-      min-height: 58px;
-      border: 0;
-      border-radius: 24px;
-      padding: 15px 20px;
-      color: #fff;
-      background: linear-gradient(90deg, #ff6b37, #ff008f);
-      box-shadow: 0 10px 25px rgba(0,0,0,.20);
-      font-size: clamp(21px, 6vw, 28px);
-      font-weight: 900;
-      cursor: pointer;
-    }
-
     #scanUI {
       position: fixed;
       inset: 0;
       z-index: 20;
       pointer-events: none;
-      display: none;
     }
 
     .title-pill {
@@ -131,21 +65,6 @@
       white-space: nowrap;
     }
 
-    #progressPill {
-      position: absolute;
-      top: max(76px, calc(env(safe-area-inset-top) + 58px));
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 9px 15px;
-      border-radius: 999px;
-      color: #fff;
-      background: rgba(20,71,91,.90);
-      box-shadow: 0 7px 20px rgba(0,0,0,.16);
-      font-size: 17px;
-      font-weight: 850;
-      white-space: nowrap;
-    }
-
     .scan-hint {
       position: absolute;
       left: 6%;
@@ -153,7 +72,7 @@
       bottom: max(28px, env(safe-area-inset-bottom));
       padding: 14px 18px;
       border-radius: 22px;
-      color: white;
+      color: #fff;
       background: rgba(20,71,91,.88);
       box-shadow: 0 8px 25px rgba(0,0,0,.18);
       text-align: center;
@@ -183,6 +102,8 @@
       flex-direction: column;
       justify-content: flex-start;
       gap: 12px;
+      padding-top: 0;
+      transform: none;
     }
 
     .game-head {
@@ -312,7 +233,7 @@
       position: fixed;
       z-index: 25;
       left: 12px;
-      top: max(118px, calc(env(safe-area-inset-top) + 105px));
+      top: max(72px, calc(env(safe-area-inset-top) + 65px));
       padding: 6px 9px;
       border-radius: 10px;
       color: rgba(255,255,255,.88);
@@ -321,14 +242,8 @@
       pointer-events: none;
     }
 
-    .final-score {
-      margin: 12px 0 18px;
-      font-size: 32px;
-      font-weight: 900;
-      color: #14683f;
-    }
-
     @media (max-height: 700px) {
+      .game-shell { justify-content: flex-start; }
       .media-card { width: min(82vw, 370px); align-self: center; }
       .task-card { font-size: 20px; padding: 13px 15px; }
       #actionButton { min-height: 50px; font-size: 22px; }
@@ -339,25 +254,8 @@
 <body>
   <div id="loader">Запускаем камеру…<br>Разрешите доступ к камере.</div>
 
-  <div id="introOverlay">
-    <div class="mission-card">
-      <div class="mission-title">⚡ Миссия Энергоши</div>
-      <div class="mission-text">
-        В доме спрятались четыре нарушения. Найди их и помоги дому экономить ресурсы!
-      </div>
-      <ul class="mission-list">
-        <li>💧 Сбереги воду</li>
-        <li>❄️ Сохрани холод</li>
-        <li>💡 Не трать электричество зря</li>
-        <li>🏠 Сохрани тепло в доме</li>
-      </ul>
-      <button id="startMission" class="primary-btn">Начать поиск</button>
-    </div>
-  </div>
-
   <div id="scanUI">
     <div class="title-pill">Энергоград · Умный дом</div>
-    <div id="progressPill">Найдено: 0 из 4</div>
     <div class="scan-hint" id="scanHint">Наведите камеру на комнату дома</div>
   </div>
 
@@ -374,20 +272,20 @@
         <div class="found-badge" id="foundBadge">⚠ Нарушение найдено!</div>
 
         <video id="bathroomVideo" class="room-media"
-          src="./assets/water.mp4" preload="metadata"
-          loop muted playsinline webkit-playsinline></video>
+          src="./assets/water.mp4"
+          preload="metadata" loop muted playsinline webkit-playsinline></video>
 
         <video id="kitchenVideo" class="room-media"
-          src="./assets/fridge.mp4" preload="metadata"
-          loop muted playsinline webkit-playsinline></video>
+          src="./assets/fridge.mp4"
+          preload="metadata" loop muted playsinline webkit-playsinline></video>
 
         <video id="livingroomVideo" class="room-media"
-          src="./assets/tvlight.mp4" preload="metadata"
-          loop muted playsinline webkit-playsinline></video>
+          src="./assets/tvlight.mp4"
+          preload="metadata" loop muted playsinline webkit-playsinline></video>
 
         <video id="bedroomVideo" class="room-media"
-          src="./assets/window.mp4" preload="metadata"
-          loop muted playsinline webkit-playsinline></video>
+          src="./assets/window.mp4"
+          preload="metadata" loop muted playsinline webkit-playsinline></video>
 
         <img id="bathroomStill" class="room-media"
           src="./assets/bathroom.png" alt="Ванная комната" />
@@ -412,25 +310,12 @@
         ✓ Отлично! Нарушение устранено! ⚡
       </div>
 
-      <button id="scanAgain">Искать следующее нарушение</button>
+      <button id="scanAgain">Вернуться к поиску</button>
     </div>
   </div>
-
-  <div id="finalOverlay">
-    <div class="final-card">
-      <div class="final-title">🏆 Миссия выполнена!</div>
-      <div class="final-score">4 из 4</div>
-      <div class="final-text">
-        Все нарушения устранены. Теперь дом Энергоши бережёт воду, электричество и тепло!
-      </div>
-      <button id="restartMission" class="primary-btn">Пройти ещё раз</button>
-    </div>
-  </div>
-
-  <audio id="voiceAudio" src="./assets/intro.mp3" preload="auto" playsinline></audio>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-audio-20261102-2; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-20261102-1; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
     embedded
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
@@ -447,19 +332,11 @@
 
   <script>
     const loader = document.getElementById('loader');
-    const introOverlay = document.getElementById('introOverlay');
-    const startMission = document.getElementById('startMission');
-    const finalOverlay = document.getElementById('finalOverlay');
-    const restartMission = document.getElementById('restartMission');
-
     const scanUI = document.getElementById('scanUI');
     const scanHint = document.getElementById('scanHint');
-    const progressPill = document.getElementById('progressPill');
     const status = document.getElementById('status');
-
     const gameOverlay = document.getElementById('gameOverlay');
     const scene = document.querySelector('a-scene');
-    const voiceAudio = document.getElementById('voiceAudio');
 
     const targets = {
       bathroom: document.getElementById('bathroomTarget'),
@@ -497,9 +374,7 @@
         button: 'Закрыть кран',
         solvedBadge: '✓ Кран закрыт',
         success: '✓ Отлично! Вода спасена! 💧⚡',
-        statusFound: 'ванная распознана',
-        problemAudio: './assets/bathroom_problem.mp3',
-        successAudio: './assets/bathroom_success.mp3'
+        statusFound: 'ванная распознана'
       },
       kitchen: {
         name: '🧊 Кухня',
@@ -507,9 +382,7 @@
         button: 'Закрыть холодильник',
         solvedBadge: '✓ Холодильник закрыт',
         success: '✓ Отлично! Холод сохранён! ❄️⚡',
-        statusFound: 'кухня распознана',
-        problemAudio: './assets/kitchen_problem.mp3',
-        successAudio: './assets/kitchen_success.mp3'
+        statusFound: 'кухня распознана'
       },
       livingroom: {
         name: '📺 Гостиная',
@@ -517,9 +390,7 @@
         button: 'Выключить всё',
         solvedBadge: '✓ Всё выключено',
         success: '✓ Отлично! Электроэнергия сбережена! 💡⚡',
-        statusFound: 'гостиная распознана',
-        problemAudio: './assets/livingroom_problem.mp3',
-        successAudio: './assets/livingroom_success.mp3'
+        statusFound: 'гостиная распознана'
       },
       bedroom: {
         name: '🛏️ Спальня',
@@ -527,13 +398,9 @@
         button: 'Закрыть окно',
         solvedBadge: '✓ Окно закрыто',
         success: '✓ Отлично! Тепло осталось в доме! 🏠⚡',
-        statusFound: 'спальня распознана',
-        problemAudio: './assets/bedroom_problem.mp3',
-        successAudio: './assets/bedroom_success.mp3'
+        statusFound: 'спальня распознана'
       }
     };
-
-    const roomKeys = Object.keys(rooms);
 
     const visibleTargets = {
       bathroom: false,
@@ -542,64 +409,12 @@
       bedroom: false
     };
 
-    const completedRooms = new Set();
-
     let gameOpen = false;
     let solved = false;
     let currentRoom = null;
     let blockedRoom = null;
-    let missionStarted = false;
-    let introSpeaking = false;
-    let voiceRunId = 0;
 
-    const playVoice = (src, onEnded = null) => {
-      voiceRunId += 1;
-      const thisRun = voiceRunId;
-
-      try {
-        voiceAudio.pause();
-        voiceAudio.currentTime = 0;
-        voiceAudio.muted = false;
-        voiceAudio.volume = 1;
-
-        const finish = () => {
-          if (thisRun !== voiceRunId) return;
-          voiceAudio.onended = null;
-          voiceAudio.onerror = null;
-          if (onEnded) onEnded();
-        };
-
-        voiceAudio.onended = finish;
-        voiceAudio.onerror = finish;
-
-        const requestedUrl = new URL(src, window.location.href).href;
-        const currentUrl = voiceAudio.currentSrc || voiceAudio.src;
-
-        if (currentUrl !== requestedUrl) {
-          voiceAudio.src = src;
-          voiceAudio.load();
-        }
-
-        const p = voiceAudio.play();
-        if (p && p.catch) {
-          p.catch(() => finish());
-        }
-      } catch (e) {
-        if (onEnded) onEnded();
-      }
-    };
-
-    const stopVoice = () => {
-      voiceRunId += 1;
-      try {
-        voiceAudio.pause();
-        voiceAudio.currentTime = 0;
-      } catch (e) {}
-    };
-
-    const updateProgress = () => {
-      progressPill.textContent = `Найдено: ${completedRooms.size} из 4`;
-    };
+    const roomKeys = Object.keys(rooms);
 
     const hideAllMedia = () => {
       roomKeys.forEach(key => {
@@ -611,10 +426,7 @@
 
     const hideLoader = () => {
       loader.style.display = 'none';
-      status.textContent = 'камера готова';
-      if (!missionStarted) {
-        introOverlay.style.display = 'flex';
-      }
+      status.textContent = 'камера готова — ищем комнату';
     };
 
     const prepareRoom = (key) => {
@@ -641,27 +453,9 @@
       scanAgain.style.display = 'none';
     };
 
-    const showAlreadyCompleted = (key) => {
-      scanHint.textContent = `${rooms[key].name.replace(/^[^А-Яа-яЁёA-Za-z]+/, '')}: уже проверено ✓`;
-      status.textContent = 'эта комната уже выполнена';
-      playVoice('./assets/completed.mp3');
-
-      setTimeout(() => {
-        if (!gameOpen && missionStarted) {
-          scanHint.textContent = 'Найдите другую комнату дома';
-          status.textContent = 'ищем непройденную комнату';
-        }
-      }, 1400);
-    };
-
     const openGame = async (key) => {
-      if (!missionStarted || introSpeaking || gameOpen) return;
+      if (gameOpen) return;
       if (blockedRoom === key) return;
-
-      if (completedRooms.has(key)) {
-        showAlreadyCompleted(key);
-        return;
-      }
 
       prepareRoom(key);
 
@@ -678,60 +472,45 @@
       } catch (e) {
         foundBadge.textContent = '⚠ Нарушение найдено! Коснитесь картинки';
       }
-
-      playVoice(rooms[key].problemAudio);
     };
 
-    const returnToSearch = () => {
+    const resetGame = () => {
       const previousRoom = currentRoom;
 
       solved = false;
       gameOpen = false;
       currentRoom = null;
+
       hideAllMedia();
 
       taskCard.style.display = 'block';
       actionButton.style.display = 'block';
       successCard.style.display = 'none';
       scanAgain.style.display = 'none';
+      foundBadge.textContent = '⚠ Нарушение найдено!';
 
       gameOverlay.scrollTop = 0;
       gameOverlay.style.display = 'none';
+      scanUI.style.display = 'block';
+      scanHint.textContent = 'Наведите камеру на другую комнату дома';
+      status.textContent = 'камера готова — ищем другую комнату';
 
       blockedRoom = previousRoom;
 
-      if (completedRooms.size >= 4) {
-        scanUI.style.display = 'none';
-        finalOverlay.style.display = 'flex';
-        status.textContent = 'миссия выполнена';
-        playVoice('./assets/final.mp3');
-        return;
-      }
-
-      scanUI.style.display = 'block';
-      updateProgress();
-      scanHint.textContent = 'Найдите следующую комнату дома';
-      status.textContent = 'ищем следующее нарушение';
-      playVoice('./assets/next.mp3');
-
+      // Если при выходе уже видна какая-то другая мишень, открываем её.
       const alreadyVisibleOther = roomKeys.find(
-        key =>
-          key !== previousRoom &&
-          visibleTargets[key] &&
-          !completedRooms.has(key)
+        key => key !== previousRoom && visibleTargets[key]
       );
 
       if (alreadyVisibleOther) {
-        setTimeout(() => openGame(alreadyVisibleOther), 180);
+        setTimeout(() => openGame(alreadyVisibleOther), 150);
       }
     };
 
     const solveCurrentRoom = () => {
-      if (!currentRoom || solved) return;
+      if (!currentRoom) return;
 
       solved = true;
-      completedRooms.add(currentRoom);
-      updateProgress();
 
       videos[currentRoom].pause();
       videos[currentRoom].style.display = 'none';
@@ -743,44 +522,13 @@
       scanAgain.style.display = 'block';
 
       foundBadge.textContent = rooms[currentRoom].solvedBadge;
-      playVoice(rooms[currentRoom].successAudio);
-
-      if (completedRooms.size >= 4) {
-        scanAgain.textContent = 'Завершить миссию';
-        status.textContent = 'все 4 нарушения устранены';
-      } else {
-        scanAgain.textContent = 'Искать следующее нарушение';
-        status.textContent = `выполнено ${completedRooms.size} из 4`;
-      }
-    };
-
-    const restartGame = () => {
-      stopVoice();
-      completedRooms.clear();
-      updateProgress();
-
-      gameOpen = false;
-      solved = false;
-      currentRoom = null;
-      blockedRoom = null;
-      missionStarted = true;
-
-      hideAllMedia();
-
-      finalOverlay.style.display = 'none';
-      gameOverlay.style.display = 'none';
-      scanUI.style.display = 'block';
-
-      scanHint.textContent = 'Наведите камеру на комнату дома';
-      status.textContent = 'камера готова — ищем комнату';
-      scanAgain.textContent = 'Искать следующее нарушение';
+      status.textContent = 'задание выполнено';
     };
 
     scene.addEventListener('arReady', hideLoader);
 
     scene.addEventListener('arError', () => {
       loader.style.display = 'none';
-      introOverlay.style.display = 'none';
       scanUI.style.display = 'block';
       scanHint.textContent = 'Не удалось запустить камеру. Обновите страницу и разрешите доступ к камере.';
       status.textContent = 'ошибка запуска AR';
@@ -791,55 +539,6 @@
         hideLoader();
       }
     }, 4500);
-
-    startMission.addEventListener('click', () => {
-      missionStarted = true;
-      introSpeaking = true;
-      introOverlay.style.display = 'none';
-      scanUI.style.display = 'block';
-      updateProgress();
-      scanHint.textContent = 'Слушаем Энергошу…';
-      status.textContent = 'миссия начинается';
-
-      // ВАЖНО: intro.mp3 уже указан в <audio>, поэтому play() вызывается
-      // прямо внутри пользовательского клика — это самый надёжный вариант
-      // для мобильных браузеров.
-      voiceRunId += 1;
-      const thisRun = voiceRunId;
-
-      const afterIntro = () => {
-        if (thisRun !== voiceRunId) return;
-        voiceAudio.onended = null;
-        voiceAudio.onerror = null;
-        introSpeaking = false;
-        scanHint.textContent = 'Наведите камеру на комнату дома';
-        status.textContent = 'камера готова — ищем комнату';
-
-        const alreadyVisible = roomKeys.find(
-          key => visibleTargets[key] && !completedRooms.has(key)
-        );
-
-        if (alreadyVisible) {
-          setTimeout(() => openGame(alreadyVisible), 120);
-        }
-      };
-
-      try {
-        voiceAudio.pause();
-        voiceAudio.currentTime = 0;
-        voiceAudio.muted = false;
-        voiceAudio.volume = 1;
-        voiceAudio.onended = afterIntro;
-        voiceAudio.onerror = afterIntro;
-
-        const p = voiceAudio.play();
-        if (p && p.catch) {
-          p.catch(() => afterIntro());
-        }
-      } catch (e) {
-        afterIntro();
-      }
-    });
 
     roomKeys.forEach(key => {
       targets[key].addEventListener('targetFound', () => {
@@ -857,23 +556,23 @@
           blockedRoom = null;
         }
 
-        if (!gameOpen && missionStarted && completedRooms.size < 4) {
-          scanHint.textContent = 'Наведите камеру на комнату дома';
+        if (!gameOpen) {
           status.textContent = 'ищем комнату';
         }
       });
 
       videos[key].addEventListener('click', async () => {
         if (!solved) {
-          try { await videos[key].play(); } catch (e) {}
+          try {
+            await videos[key].play();
+          } catch (e) {}
         }
       });
     });
 
     actionButton.addEventListener('click', solveCurrentRoom);
-    scanAgain.addEventListener('click', returnToSearch);
-    closeGame.addEventListener('click', returnToSearch);
-    restartMission.addEventListener('click', restartGame);
+    scanAgain.addEventListener('click', resetGame);
+    closeGame.addEventListener('click', resetGame);
   </script>
 </body>
 </html>
