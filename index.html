@@ -431,8 +431,27 @@
     </div>
   </div>
 
+  <!-- Озвучка. Она не управляет AR и не влияет на распознавание комнат. -->
+  <div id="audioBank" style="display:none">
+    <audio id="audioIntro" src="./assets/intro.mp3" preload="auto"></audio>
+
+    <audio id="audioBathroomProblem" src="./assets/bathroom_problem.mp3" preload="auto"></audio>
+    <audio id="audioBathroomSuccess" src="./assets/bathroom_success.mp3" preload="auto"></audio>
+
+    <audio id="audioKitchenProblem" src="./assets/kitchen_problem.mp3" preload="auto"></audio>
+    <audio id="audioKitchenSuccess" src="./assets/kitchen_success.mp3" preload="auto"></audio>
+
+    <audio id="audioLivingroomProblem" src="./assets/livingroom_problem.mp3" preload="auto"></audio>
+    <audio id="audioLivingroomSuccess" src="./assets/livingroom_success.mp3" preload="auto"></audio>
+
+    <audio id="audioBedroomProblem" src="./assets/bedroom_problem.mp3" preload="auto"></audio>
+    <audio id="audioBedroomSuccess" src="./assets/bedroom_success.mp3" preload="auto"></audio>
+
+    <audio id="audioFinal" src="./assets/final.mp3" preload="auto"></audio>
+  </div>
+
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-fast-20261103-1; warmupTolerance: 1; missTolerance: 5; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-fast-audio-safe-20261103-1; warmupTolerance: 1; missTolerance: 5; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
     embedded
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
@@ -459,6 +478,96 @@
     const status = document.getElementById('status');
     const gameOverlay = document.getElementById('gameOverlay');
     const scene = document.querySelector('a-scene');
+
+    // Отдельный аудиослой: звук ничего не блокирует и не меняет состояние AR.
+    const audio = {
+      intro: document.getElementById('audioIntro'),
+      bathroomProblem: document.getElementById('audioBathroomProblem'),
+      bathroomSuccess: document.getElementById('audioBathroomSuccess'),
+      kitchenProblem: document.getElementById('audioKitchenProblem'),
+      kitchenSuccess: document.getElementById('audioKitchenSuccess'),
+      livingroomProblem: document.getElementById('audioLivingroomProblem'),
+      livingroomSuccess: document.getElementById('audioLivingroomSuccess'),
+      bedroomProblem: document.getElementById('audioBedroomProblem'),
+      bedroomSuccess: document.getElementById('audioBedroomSuccess'),
+      final: document.getElementById('audioFinal')
+    };
+
+    let currentVoice = null;
+    let voiceQueue = [];
+
+    const stopAllVoice = () => {
+      voiceQueue = [];
+      Object.values(audio).forEach(item => {
+        try {
+          item.pause();
+          item.currentTime = 0;
+          item.onended = null;
+          item.onerror = null;
+        } catch (e) {}
+      });
+      currentVoice = null;
+    };
+
+    const runVoiceQueue = () => {
+      if (currentVoice || voiceQueue.length === 0) return;
+
+      const key = voiceQueue.shift();
+      const item = audio[key];
+      if (!item) {
+        runVoiceQueue();
+        return;
+      }
+
+      currentVoice = key;
+
+      const finish = () => {
+        item.onended = null;
+        item.onerror = null;
+        currentVoice = null;
+        runVoiceQueue();
+      };
+
+      try {
+        item.currentTime = 0;
+        item.muted = false;
+        item.volume = 1;
+        item.onended = finish;
+        item.onerror = finish;
+
+        const p = item.play();
+        if (p && p.catch) {
+          p.catch(() => finish());
+        }
+      } catch (e) {
+        finish();
+      }
+    };
+
+    // Обычная реплика: ждёт окончания текущей, но НЕ задерживает игру.
+    const queueVoice = (key) => {
+      if (!audio[key]) return;
+      voiceQueue.push(key);
+      runVoiceQueue();
+    };
+
+    // Реплика действия/финала: важнее старой фразы, поэтому заменяет её.
+    const playVoiceNow = (key) => {
+      voiceQueue = [];
+
+      if (currentVoice && audio[currentVoice]) {
+        try {
+          audio[currentVoice].pause();
+          audio[currentVoice].currentTime = 0;
+          audio[currentVoice].onended = null;
+          audio[currentVoice].onerror = null;
+        } catch (e) {}
+      }
+
+      currentVoice = null;
+      voiceQueue.push(key);
+      runVoiceQueue();
+    };
 
     const targets = {
       bathroom: document.getElementById('bathroomTarget'),
@@ -496,7 +605,9 @@
         button: 'Закрыть кран',
         solvedBadge: '✓ Кран закрыт',
         success: '✓ Отлично! Вода спасена! 💧⚡',
-        statusFound: 'ванная распознана'
+        statusFound: 'ванная распознана',
+        problemVoice: 'bathroomProblem',
+        successVoice: 'bathroomSuccess'
       },
       kitchen: {
         name: '🧊 Кухня',
@@ -504,7 +615,9 @@
         button: 'Закрыть холодильник',
         solvedBadge: '✓ Холодильник закрыт',
         success: '✓ Отлично! Холод сохранён! ❄️⚡',
-        statusFound: 'кухня распознана'
+        statusFound: 'кухня распознана',
+        problemVoice: 'kitchenProblem',
+        successVoice: 'kitchenSuccess'
       },
       livingroom: {
         name: '📺 Гостиная',
@@ -512,7 +625,9 @@
         button: 'Выключить всё',
         solvedBadge: '✓ Всё выключено',
         success: '✓ Отлично! Электроэнергия сбережена! 💡⚡',
-        statusFound: 'гостиная распознана'
+        statusFound: 'гостиная распознана',
+        problemVoice: 'livingroomProblem',
+        successVoice: 'livingroomSuccess'
       },
       bedroom: {
         name: '🛏️ Спальня',
@@ -520,7 +635,9 @@
         button: 'Закрыть окно',
         solvedBadge: '✓ Окно закрыто',
         success: '✓ Отлично! Тепло осталось в доме! 🏠⚡',
-        statusFound: 'спальня распознана'
+        statusFound: 'спальня распознана',
+        problemVoice: 'bedroomProblem',
+        successVoice: 'bedroomSuccess'
       }
     };
 
@@ -615,6 +732,10 @@
       } catch (e) {
         foundBadge.textContent = '⚠ Нарушение найдено! Коснитесь картинки';
       }
+
+      // Если другая реплика ещё звучит, эта просто встанет в очередь.
+      // Сама комната уже открыта и работает независимо от звука.
+      queueVoice(rooms[key].problemVoice);
     };
 
     const resetGame = () => {
@@ -641,6 +762,7 @@
         scanUI.style.display = 'none';
         finalOverlay.style.display = 'flex';
         status.textContent = 'миссия выполнена';
+        playVoiceNow('final');
         return;
       }
 
@@ -678,6 +800,10 @@
       scanAgain.style.display = 'block';
 
       foundBadge.textContent = rooms[currentRoom].solvedBadge;
+
+      // Пользователь уже выполнил действие — похвала важнее незаконченной
+      // вопросительной реплики, поэтому она может её заменить.
+      playVoiceNow(rooms[currentRoom].successVoice);
 
       if (completedRooms.size >= 4) {
         scanAgain.textContent = 'Завершить миссию';
@@ -752,6 +878,10 @@
       scanHint.textContent = 'Наведите камеру на комнату дома';
       status.textContent = 'камера готова — ищем комнату';
 
+      // Запускается непосредственно по нажатию пользователя — мобильный
+      // браузер разрешает воспроизведение. AR при этом продолжает работать.
+      playVoiceNow('intro');
+
       // Пока ребёнок читал стартовый экран, MindAR уже мог увидеть комнату.
       // Открываем её сразу, не заставляя убирать и снова наводить телефон.
       const alreadyVisible = roomKeys.find(
@@ -764,6 +894,7 @@
     });
 
     restartMission.addEventListener('click', () => {
+      stopAllVoice();
       completedRooms.clear();
       updateProgress();
       missionStarted = true;
