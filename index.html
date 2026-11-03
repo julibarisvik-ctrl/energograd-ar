@@ -927,9 +927,43 @@
       scanHint.textContent = 'Наведите камеру на комнату дома';
       status.textContent = 'камера готова — ищем комнату';
 
-      // Запускается непосредственно по нажатию пользователя — мобильный
-      // браузер разрешает воспроизведение. AR при этом продолжает работать.
-      playVoiceNow('intro');
+      // Приветствие запускаем НАПРЯМУЮ внутри пользовательского клика.
+      // Это надёжнее для мобильных браузеров, чем ставить первую реплику в очередь.
+      try {
+        voiceQueue = [];
+
+        if (currentVoice && audio[currentVoice]) {
+          audio[currentVoice].pause();
+          audio[currentVoice].currentTime = 0;
+          audio[currentVoice].onended = null;
+          audio[currentVoice].onerror = null;
+        }
+
+        currentVoice = 'intro';
+        const introAudio = audio.intro;
+
+        introAudio.pause();
+        introAudio.currentTime = 0;
+        introAudio.muted = false;
+        introAudio.volume = 1;
+
+        const finishIntro = () => {
+          introAudio.onended = null;
+          introAudio.onerror = null;
+          currentVoice = null;
+          runVoiceQueue();
+        };
+
+        introAudio.onended = finishIntro;
+        introAudio.onerror = finishIntro;
+
+        const introPlay = introAudio.play();
+        if (introPlay && introPlay.catch) {
+          introPlay.catch(() => finishIntro());
+        }
+      } catch (e) {
+        currentVoice = null;
+      }
 
       // Пока ребёнок читал стартовый экран, MindAR уже мог увидеть комнату.
       // Открываем её сразу, не заставляя убирать и снова наводить телефон.
