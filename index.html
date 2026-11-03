@@ -590,6 +590,42 @@
       bedroom: document.getElementById('bedroomStill')
     };
 
+    // Готовим правильную статичную картинку заранее, пока идёт анимация нарушения.
+    // Тогда после нажатия кнопки она появляется сразу, без эффекта "шторки".
+    const stillReady = {};
+
+    const preloadStill = (key) => {
+      const img = stills[key];
+      if (!img) return Promise.resolve();
+
+      img.loading = 'eager';
+
+      if (img.complete && img.naturalWidth > 0) {
+        return Promise.resolve();
+      }
+
+      if (stillReady[key]) return stillReady[key];
+
+      stillReady[key] = new Promise((resolve) => {
+        const finish = () => resolve();
+
+        if (typeof img.decode === 'function') {
+          img.decode().then(finish).catch(() => {
+            if (img.complete) finish();
+            else {
+              img.addEventListener('load', finish, { once: true });
+              img.addEventListener('error', finish, { once: true });
+            }
+          });
+        } else {
+          img.addEventListener('load', finish, { once: true });
+          img.addEventListener('error', finish, { once: true });
+        }
+      });
+
+      return stillReady[key];
+    };
+
     const taskCard = document.getElementById('taskCard');
     const actionButton = document.getElementById('actionButton');
     const successCard = document.getElementById('successCard');
@@ -719,6 +755,10 @@
 
       prepareRoom(key);
 
+      // Пока ребёнок смотрит анимацию нарушения, заранее загружаем
+      // и декодируем правильную картинку этой комнаты.
+      preloadStill(key);
+
       gameOpen = true;
       solved = false;
 
@@ -783,27 +823,36 @@
       }
     };
 
-    const solveCurrentRoom = () => {
-      if (!currentRoom) return;
+    const solveCurrentRoom = async () => {
+      if (!currentRoom || solved) return;
 
+      const roomKey = currentRoom;
       solved = true;
-      completedRooms.add(currentRoom);
+      completedRooms.add(roomKey);
       updateProgress();
 
-      videos[currentRoom].pause();
-      videos[currentRoom].style.display = 'none';
-      stills[currentRoom].style.display = 'block';
+      // Если картинка ещё не успела декодироваться, оставляем видео на экране
+      // ещё на долю секунды и меняем кадр только после полной готовности PNG.
+      await preloadStill(roomKey);
+
+      videos[roomKey].pause();
+      stills[roomKey].style.display = 'block';
+
+      // Даём браузеру один кадр на готовую картинку и только потом убираем видео.
+      requestAnimationFrame(() => {
+        videos[roomKey].style.display = 'none';
+      });
 
       taskCard.style.display = 'none';
       actionButton.style.display = 'none';
       successCard.style.display = 'block';
       scanAgain.style.display = 'block';
 
-      foundBadge.textContent = rooms[currentRoom].solvedBadge;
+      foundBadge.textContent = rooms[roomKey].solvedBadge;
 
       // Пользователь уже выполнил действие — похвала важнее незаконченной
       // вопросительной реплики, поэтому она может её заменить.
-      playVoiceNow(rooms[currentRoom].successVoice);
+      playVoiceNow(rooms[roomKey].successVoice);
 
       if (completedRooms.size >= 4) {
         scanAgain.textContent = 'Завершить миссию';
