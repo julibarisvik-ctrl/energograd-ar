@@ -435,23 +435,23 @@
   <div id="audioBank" style="display:none">
     <audio id="audioIntro" src="./assets/intro.mp3" preload="auto"></audio>
 
-    <audio id="audioBathroomProblem" src="./assets/bathroom_problem.mp3" preload="auto"></audio>
-    <audio id="audioBathroomSuccess" src="./assets/bathroom_success.mp3" preload="auto"></audio>
+    <audio id="audioBathroomProblem" src="./assets/bathroom_problem.mp3" preload="none"></audio>
+    <audio id="audioBathroomSuccess" src="./assets/bathroom_success.mp3" preload="none"></audio>
 
-    <audio id="audioKitchenProblem" src="./assets/kitchen_problem.mp3" preload="auto"></audio>
-    <audio id="audioKitchenSuccess" src="./assets/kitchen_success.mp3" preload="auto"></audio>
+    <audio id="audioKitchenProblem" src="./assets/kitchen_problem.mp3" preload="none"></audio>
+    <audio id="audioKitchenSuccess" src="./assets/kitchen_success.mp3" preload="none"></audio>
 
-    <audio id="audioLivingroomProblem" src="./assets/livingroom_problem.mp3" preload="auto"></audio>
-    <audio id="audioLivingroomSuccess" src="./assets/livingroom_success.mp3" preload="auto"></audio>
+    <audio id="audioLivingroomProblem" src="./assets/livingroom_problem.mp3" preload="none"></audio>
+    <audio id="audioLivingroomSuccess" src="./assets/livingroom_success.mp3" preload="none"></audio>
 
-    <audio id="audioBedroomProblem" src="./assets/bedroom_problem.mp3" preload="auto"></audio>
-    <audio id="audioBedroomSuccess" src="./assets/bedroom_success.mp3" preload="auto"></audio>
+    <audio id="audioBedroomProblem" src="./assets/bedroom_problem.mp3" preload="none"></audio>
+    <audio id="audioBedroomSuccess" src="./assets/bedroom_success.mp3" preload="none"></audio>
 
-    <audio id="audioFinal" src="./assets/final.mp3" preload="auto"></audio>
+    <audio id="audioFinal" src="./assets/final.mp3" preload="none"></audio>
   </div>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-fast-audio-safe-20261103-1; warmupTolerance: 1; missTolerance: 5; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-video-priority-20261103-1; warmupTolerance: 1; missTolerance: 5; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
     embedded
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
@@ -581,6 +581,47 @@
       kitchen: document.getElementById('kitchenVideo'),
       livingroom: document.getElementById('livingroomVideo'),
       bedroom: document.getElementById('bedroomVideo')
+    };
+
+    // Загружаем только видео той комнаты, которая действительно найдена.
+    // Экран задания показываем после готовности первого кадра.
+    const waitForRoomVideo = (key) => {
+      const video = videos[key];
+
+      return new Promise((resolve) => {
+        let finished = false;
+
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          video.removeEventListener('loadeddata', finish);
+          video.removeEventListener('canplay', finish);
+          video.removeEventListener('error', finish);
+          resolve();
+        };
+
+        try {
+          video.pause();
+          video.currentTime = 0;
+          video.preload = 'auto';
+
+          if (video.readyState >= 2) {
+            finish();
+            return;
+          }
+
+          video.addEventListener('loadeddata', finish, { once: true });
+          video.addEventListener('canplay', finish, { once: true });
+          video.addEventListener('error', finish, { once: true });
+
+          video.load();
+
+          // Не зависаем бесконечно даже при медленной сети.
+          setTimeout(finish, 3500);
+        } catch (e) {
+          finish();
+        }
+      });
     };
 
     const stills = {
@@ -730,12 +771,6 @@
 
       hideAllMedia();
 
-      videos[key].style.display = 'block';
-      try {
-        videos[key].load();
-        videos[key].currentTime = 0;
-      } catch (e) {}
-
       taskCard.style.display = 'block';
       actionButton.style.display = 'block';
       successCard.style.display = 'none';
@@ -753,28 +788,39 @@
         return;
       }
 
-      prepareRoom(key);
-
-      // Пока ребёнок смотрит анимацию нарушения, заранее загружаем
-      // и декодируем правильную картинку этой комнаты.
-      preloadStill(key);
-
+      // Сразу блокируем повторные targetFound, пока готовится видео.
       gameOpen = true;
       solved = false;
 
-      scanUI.style.display = 'none';
-      gameOverlay.style.display = 'block';
-      gameOverlay.scrollTop = 0;
-      status.textContent = rooms[key].statusFound;
+      prepareRoom(key);
+
+      scanHint.textContent = 'Нарушение найдено — загружаем анимацию…';
+      status.textContent = 'готовим анимацию комнаты';
+
+      // Приоритет — видео текущей комнаты. Остальные MP4 не загружаются.
+      await waitForRoomVideo(key);
+
+      // Если пользователь уже вышел из комнаты за время загрузки — ничего не показываем.
+      if (!gameOpen || currentRoom !== key) return;
+
+      // Правильную статичную картинку готовим уже после первого кадра видео.
+      preloadStill(key);
+
+      videos[key].style.display = 'block';
 
       try {
+        videos[key].currentTime = 0;
         await videos[key].play();
       } catch (e) {
         foundBadge.textContent = '⚠ Нарушение найдено! Коснитесь картинки';
       }
 
-      // Если другая реплика ещё звучит, эта просто встанет в очередь.
-      // Сама комната уже открыта и работает независимо от звука.
+      // Только теперь показываем карточку задания — видео уже готово.
+      scanUI.style.display = 'none';
+      gameOverlay.style.display = 'block';
+      gameOverlay.scrollTop = 0;
+      status.textContent = rooms[key].statusFound;
+
       queueVoice(rooms[key].problemVoice);
     };
 
