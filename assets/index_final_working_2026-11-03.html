@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#0f2f3d" />
+  <title>Энергоград — Умный дом</title>
+
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #000;
+    }
+
+    a-scene {
+      position: fixed !important;
+      inset: 0;
+      z-index: 1;
+    }
+
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      text-align: center;
+      color: #153949;
+      background: #f7fbfc;
+      font-size: 23px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    #scanUI {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .title-pill {
+      position: absolute;
+      top: max(18px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 20px;
+      border-radius: 999px;
+      color: #17384a;
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 8px 25px rgba(0,0,0,.18);
+      font-size: clamp(18px, 5vw, 23px);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .scan-hint {
+      position: absolute;
+      left: 6%;
+      right: 6%;
+      bottom: max(28px, env(safe-area-inset-bottom));
+      padding: 14px 18px;
+      border-radius: 22px;
+      color: #fff;
+      background: rgba(20,71,91,.88);
+      box-shadow: 0 8px 25px rgba(0,0,0,.18);
+      text-align: center;
+      font-size: clamp(17px, 4.6vw, 21px);
+      line-height: 1.25;
+      font-weight: 750;
+    }
+
+    #gameOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      overflow-y: auto;
+      padding: 18px 16px 18px;
+      background: rgba(5,23,32,.62);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .game-shell {
+      width: min(100%, 520px);
+      min-height: 0;
+      height: auto;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 12px;
+      padding-top: 0;
+      transform: none;
+    }
+
+    .game-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 12;
+    }
+
+    .room-name {
+      flex: 1;
+      padding: 11px 16px;
+      border-radius: 18px;
+      color: #17384a;
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 7px 22px rgba(0,0,0,.16);
+      font-size: clamp(18px, 5vw, 23px);
+      font-weight: 850;
+      text-align: center;
+    }
+
+    .close-game {
+      width: 46px;
+      height: 46px;
+      flex: 0 0 46px;
+      border: 0;
+      border-radius: 50%;
+      color: #17384a;
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 7px 22px rgba(0,0,0,.16);
+      font-size: 25px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .media-card {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      border: 4px solid rgba(255,255,255,.92);
+      border-radius: 28px;
+      background: #dfecef;
+      box-shadow: 0 16px 40px rgba(0,0,0,.28);
+    }
+
+    .room-media {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+      background: #dfecef;
+    }
+
+    .found-badge {
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      z-index: 3;
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: #fff;
+      background: rgba(12,75,96,.91);
+      box-shadow: 0 5px 15px rgba(0,0,0,.18);
+      font-size: clamp(14px, 4vw, 17px);
+      font-weight: 800;
+    }
+
+    .task-card,
+    .success-card {
+      padding: 17px 18px;
+      border-radius: 24px;
+      background: rgba(255,255,255,.97);
+      box-shadow: 0 10px 28px rgba(0,0,0,.20);
+      text-align: center;
+    }
+
+    .task-card {
+      color: #102b3a;
+      font-size: clamp(21px, 5.7vw, 29px);
+      line-height: 1.12;
+      font-weight: 850;
+    }
+
+    #actionButton {
+      width: 100%;
+      min-height: 58px;
+      border: 0;
+      border-radius: 24px;
+      padding: 15px 20px;
+      color: #fff;
+      background: linear-gradient(90deg, #ff6b37, #ff008f);
+      box-shadow: 0 10px 25px rgba(0,0,0,.22);
+      font-size: clamp(22px, 6vw, 29px);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .success-card {
+      display: none;
+      color: #14683f;
+      font-size: clamp(21px, 5.6vw, 28px);
+      line-height: 1.18;
+      font-weight: 900;
+    }
+
+    #scanAgain {
+      display: none;
+      width: 100%;
+      min-height: 52px;
+      border: 2px solid rgba(255,255,255,.8);
+      border-radius: 20px;
+      padding: 12px 18px;
+      color: #fff;
+      background: rgba(16,62,79,.78);
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    #status {
+      position: fixed;
+      z-index: 25;
+      left: 12px;
+      top: max(72px, calc(env(safe-area-inset-top) + 65px));
+      padding: 6px 9px;
+      border-radius: 10px;
+      color: rgba(255,255,255,.88);
+      background: rgba(0,0,0,.28);
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+
+    #introOverlay,
+    #finalOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(5,23,32,.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .mission-card {
+      width: min(100%, 470px);
+      padding: 28px 22px 24px;
+      border-radius: 30px;
+      background: rgba(255,255,255,.98);
+      box-shadow: 0 20px 55px rgba(0,0,0,.35);
+      text-align: center;
+      color: #17384a;
+    }
+
+    .mission-title {
+      font-size: clamp(27px, 7vw, 37px);
+      line-height: 1.05;
+      font-weight: 900;
+      margin-bottom: 14px;
+    }
+
+    .mission-text {
+      font-size: clamp(18px, 4.8vw, 22px);
+      line-height: 1.35;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    .mission-list {
+      margin: 0 0 22px;
+      padding: 14px 16px;
+      border-radius: 22px;
+      background: #eef7f8;
+      font-size: clamp(16px, 4.3vw, 20px);
+      line-height: 1.45;
+      font-weight: 750;
+    }
+
+    .mission-button {
+      width: 100%;
+      min-height: 58px;
+      border: 0;
+      border-radius: 24px;
+      padding: 15px 20px;
+      color: #fff;
+      background: linear-gradient(90deg, #ff6b37, #ff008f);
+      box-shadow: 0 10px 25px rgba(0,0,0,.20);
+      font-size: clamp(21px, 5.7vw, 27px);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .progress-pill {
+      position: absolute;
+      top: max(78px, calc(env(safe-area-inset-top) + 78px));
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 15px;
+      border-radius: 999px;
+      color: #fff;
+      background: rgba(20,71,91,.90);
+      box-shadow: 0 7px 20px rgba(0,0,0,.18);
+      font-size: clamp(15px, 4vw, 18px);
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .final-score {
+      display: inline-block;
+      margin: 4px 0 15px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      color: #fff;
+      background: #14704a;
+      font-size: clamp(20px, 5.4vw, 26px);
+      font-weight: 900;
+    }
+
+    @media (max-height: 700px) {
+      .game-shell { justify-content: flex-start; }
+      .media-card { width: min(82vw, 370px); align-self: center; }
+      .task-card { font-size: 20px; padding: 13px 15px; }
+      #actionButton { min-height: 50px; font-size: 22px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loader">Запускаем камеру…<br>Разрешите доступ к камере.</div>
+
+  <div id="introOverlay">
+    <div class="mission-card">
+      <div class="mission-title">⚡ Миссия Энергоши</div>
+      <div class="mission-text">
+        В доме спрятались четыре нарушения. Найди их и помоги дому экономить ресурсы!
+      </div>
+      <div class="mission-list">
+        💧 сберечь воду<br>
+        ❄️ не терять холод<br>
+        💡 экономить электричество<br>
+        🏠 сохранить тепло
+      </div>
+      <button class="mission-button" id="startMission">Начать поиск</button>
+    </div>
+  </div>
+
+  <div id="scanUI" style="display:none">
+    <div class="title-pill">Энергоград · Умный дом</div>
+    <div class="progress-pill" id="progressPill">Найдено: 0 из 4</div>
+    <div class="scan-hint" id="scanHint">Наведите камеру на комнату дома</div>
+  </div>
+
+  <div id="finalOverlay">
+    <div class="mission-card">
+      <div class="mission-title">🏆 Миссия выполнена!</div>
+      <div class="final-score">4 из 4</div>
+      <div class="mission-text">
+        Все нарушения устранены. Теперь дом Энергоши бережёт воду, электричество и тепло!
+      </div>
+      <button class="mission-button" id="restartMission">Пройти ещё раз</button>
+    </div>
+  </div>
+
+  <div id="status">запускаем камеру…</div>
+
+  <div id="gameOverlay">
+    <div class="game-shell">
+      <div class="game-head">
+        <div class="room-name">Комната</div>
+        <button class="close-game" id="closeGame" aria-label="Закрыть">×</button>
+      </div>
+
+      <div class="media-card">
+        <div class="found-badge" id="foundBadge">⚠ Нарушение найдено!</div>
+
+        <video id="bathroomVideo" class="room-media"
+          src="./assets/water.mp4"
+          preload="none" loop muted playsinline webkit-playsinline></video>
+
+        <video id="kitchenVideo" class="room-media"
+          src="./assets/fridge.mp4"
+          preload="none" loop muted playsinline webkit-playsinline></video>
+
+        <video id="livingroomVideo" class="room-media"
+          src="./assets/tvlight.mp4"
+          preload="none" loop muted playsinline webkit-playsinline></video>
+
+        <video id="bedroomVideo" class="room-media"
+          src="./assets/window.mp4"
+          preload="none" loop muted playsinline webkit-playsinline></video>
+
+        <img id="bathroomStill" class="room-media"
+          src="./assets/bathroom.png" alt="Ванная комната" loading="lazy" decoding="async" />
+
+        <img id="kitchenStill" class="room-media"
+          src="./assets/kitchen.png" alt="Кухня" loading="lazy" decoding="async" />
+
+        <img id="livingroomStill" class="room-media"
+          src="./assets/livingroom.png" alt="Гостиная" loading="lazy" decoding="async" />
+
+        <img id="bedroomStill" class="room-media"
+          src="./assets/bedroom.png" alt="Спальня" loading="lazy" decoding="async" />
+      </div>
+
+      <div class="task-card" id="taskCard">
+        Нарушение найдено.<br>Что нужно сделать?
+      </div>
+
+      <button id="actionButton">Исправить</button>
+
+      <div class="success-card" id="successCard">
+        ✓ Отлично! Нарушение устранено! ⚡
+      </div>
+
+      <button id="scanAgain">Вернуться к поиску</button>
+    </div>
+  </div>
+
+  <!-- Озвучка. Она не управляет AR и не влияет на распознавание комнат. -->
+  <div id="audioBank" style="display:none">
+    <audio id="audioIntro" src="./assets/intro.mp3" preload="auto"></audio>
+
+    <audio id="audioBathroomProblem" src="./assets/bathroom_problem.mp3" preload="none"></audio>
+    <audio id="audioBathroomSuccess" src="./assets/bathroom_success.mp3" preload="none"></audio>
+
+    <audio id="audioKitchenProblem" src="./assets/kitchen_problem.mp3" preload="none"></audio>
+    <audio id="audioKitchenSuccess" src="./assets/kitchen_success.mp3" preload="none"></audio>
+
+    <audio id="audioLivingroomProblem" src="./assets/livingroom_problem.mp3" preload="none"></audio>
+    <audio id="audioLivingroomSuccess" src="./assets/livingroom_success.mp3" preload="none"></audio>
+
+    <audio id="audioBedroomProblem" src="./assets/bedroom_problem.mp3" preload="none"></audio>
+    <audio id="audioBedroomSuccess" src="./assets/bedroom_success.mp3" preload="none"></audio>
+
+    <audio id="audioFinal" src="./assets/final.mp3" preload="none"></audio>
+  </div>
+
+  <a-scene
+    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-video-priority-20261103-1; warmupTolerance: 1; missTolerance: 5; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    embedded
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights"
+    xr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity id="bathroomTarget" mindar-image-target="targetIndex: 0"></a-entity>
+    <a-entity id="kitchenTarget" mindar-image-target="targetIndex: 1"></a-entity>
+    <a-entity id="livingroomTarget" mindar-image-target="targetIndex: 2"></a-entity>
+    <a-entity id="bedroomTarget" mindar-image-target="targetIndex: 3"></a-entity>
+  </a-scene>
+
+  <script>
+    const loader = document.getElementById('loader');
+    const introOverlay = document.getElementById('introOverlay');
+    const finalOverlay = document.getElementById('finalOverlay');
+    const startMission = document.getElementById('startMission');
+    const restartMission = document.getElementById('restartMission');
+    const progressPill = document.getElementById('progressPill');
+    const scanUI = document.getElementById('scanUI');
+    const scanHint = document.getElementById('scanHint');
+    const status = document.getElementById('status');
+    const gameOverlay = document.getElementById('gameOverlay');
+    const scene = document.querySelector('a-scene');
+
+    // Отдельный аудиослой: звук ничего не блокирует и не меняет состояние AR.
+    const audio = {
+      intro: document.getElementById('audioIntro'),
+      bathroomProblem: document.getElementById('audioBathroomProblem'),
+      bathroomSuccess: document.getElementById('audioBathroomSuccess'),
+      kitchenProblem: document.getElementById('audioKitchenProblem'),
+      kitchenSuccess: document.getElementById('audioKitchenSuccess'),
+      livingroomProblem: document.getElementById('audioLivingroomProblem'),
+      livingroomSuccess: document.getElementById('audioLivingroomSuccess'),
+      bedroomProblem: document.getElementById('audioBedroomProblem'),
+      bedroomSuccess: document.getElementById('audioBedroomSuccess'),
+      final: document.getElementById('audioFinal')
+    };
+
+    let currentVoice = null;
+    let voiceQueue = [];
+
+    const stopAllVoice = () => {
+      voiceQueue = [];
+      Object.values(audio).forEach(item => {
+        try {
+          item.pause();
+          item.currentTime = 0;
+          item.onended = null;
+          item.onerror = null;
+        } catch (e) {}
+      });
+      currentVoice = null;
+    };
+
+    const runVoiceQueue = () => {
+      if (currentVoice || voiceQueue.length === 0) return;
+
+      const key = voiceQueue.shift();
+      const item = audio[key];
+      if (!item) {
+        runVoiceQueue();
+        return;
+      }
+
+      currentVoice = key;
+
+      const finish = () => {
+        item.onended = null;
+        item.onerror = null;
+        currentVoice = null;
+        runVoiceQueue();
+      };
+
+      try {
+        item.currentTime = 0;
+        item.muted = false;
+        item.volume = 1;
+        item.onended = finish;
+        item.onerror = finish;
+
+        const p = item.play();
+        if (p && p.catch) {
+          p.catch(() => finish());
+        }
+      } catch (e) {
+        finish();
+      }
+    };
+
+    // Обычная реплика: ждёт окончания текущей, но НЕ задерживает игру.
+    const queueVoice = (key) => {
+      if (!audio[key]) return;
+      voiceQueue.push(key);
+      runVoiceQueue();
+    };
+
+    // Реплика действия/финала: важнее старой фразы, поэтому заменяет её.
+    const playVoiceNow = (key) => {
+      voiceQueue = [];
+
+      if (currentVoice && audio[currentVoice]) {
+        try {
+          audio[currentVoice].pause();
+          audio[currentVoice].currentTime = 0;
+          audio[currentVoice].onended = null;
+          audio[currentVoice].onerror = null;
+        } catch (e) {}
+      }
+
+      currentVoice = null;
+      voiceQueue.push(key);
+      runVoiceQueue();
+    };
+
+    const targets = {
+      bathroom: document.getElementById('bathroomTarget'),
+      kitchen: document.getElementById('kitchenTarget'),
+      livingroom: document.getElementById('livingroomTarget'),
+      bedroom: document.getElementById('bedroomTarget')
+    };
+
+    const videos = {
+      bathroom: document.getElementById('bathroomVideo'),
+      kitchen: document.getElementById('kitchenVideo'),
+      livingroom: document.getElementById('livingroomVideo'),
+      bedroom: document.getElementById('bedroomVideo')
+    };
+
+    // Загружаем только видео той комнаты, которая действительно найдена.
+    // Экран задания показываем после готовности первого кадра.
+    const waitForRoomVideo = (key) => {
+      const video = videos[key];
+
+      return new Promise((resolve) => {
+        let finished = false;
+
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          video.removeEventListener('loadeddata', finish);
+          video.removeEventListener('canplay', finish);
+          video.removeEventListener('error', finish);
+          resolve();
+        };
+
+        try {
+          video.pause();
+          video.currentTime = 0;
+          video.preload = 'auto';
+
+          if (video.readyState >= 2) {
+            finish();
+            return;
+          }
+
+          video.addEventListener('loadeddata', finish, { once: true });
+          video.addEventListener('canplay', finish, { once: true });
+          video.addEventListener('error', finish, { once: true });
+
+          video.load();
+
+          // Не зависаем бесконечно даже при медленной сети.
+          setTimeout(finish, 3500);
+        } catch (e) {
+          finish();
+        }
+      });
+    };
+
+    const stills = {
+      bathroom: document.getElementById('bathroomStill'),
+      kitchen: document.getElementById('kitchenStill'),
+      livingroom: document.getElementById('livingroomStill'),
+      bedroom: document.getElementById('bedroomStill')
+    };
+
+    // Готовим правильную статичную картинку заранее, пока идёт анимация нарушения.
+    // Тогда после нажатия кнопки она появляется сразу, без эффекта "шторки".
+    const stillReady = {};
+
+    const preloadStill = (key) => {
+      const img = stills[key];
+      if (!img) return Promise.resolve();
+
+      img.loading = 'eager';
+
+      if (img.complete && img.naturalWidth > 0) {
+        return Promise.resolve();
+      }
+
+      if (stillReady[key]) return stillReady[key];
+
+      stillReady[key] = new Promise((resolve) => {
+        const finish = () => resolve();
+
+        if (typeof img.decode === 'function') {
+          img.decode().then(finish).catch(() => {
+            if (img.complete) finish();
+            else {
+              img.addEventListener('load', finish, { once: true });
+              img.addEventListener('error', finish, { once: true });
+            }
+          });
+        } else {
+          img.addEventListener('load', finish, { once: true });
+          img.addEventListener('error', finish, { once: true });
+        }
+      });
+
+      return stillReady[key];
+    };
+
+    const taskCard = document.getElementById('taskCard');
+    const actionButton = document.getElementById('actionButton');
+    const successCard = document.getElementById('successCard');
+    const scanAgain = document.getElementById('scanAgain');
+    const closeGame = document.getElementById('closeGame');
+    const foundBadge = document.getElementById('foundBadge');
+    const roomName = document.querySelector('.room-name');
+
+    const rooms = {
+      bathroom: {
+        name: '🚿 Ванная комната',
+        question: 'Ой! Вода убегает.<br>Что нужно сделать?',
+        button: 'Закрыть кран',
+        solvedBadge: '✓ Кран закрыт',
+        success: '✓ Отлично! Вода спасена! 💧⚡',
+        statusFound: 'ванная распознана',
+        problemVoice: 'bathroomProblem',
+        successVoice: 'bathroomSuccess'
+      },
+      kitchen: {
+        name: '🧊 Кухня',
+        question: 'Ой! Холод убегает.<br>Что нужно сделать?',
+        button: 'Закрыть холодильник',
+        solvedBadge: '✓ Холодильник закрыт',
+        success: '✓ Отлично! Холод сохранён! ❄️⚡',
+        statusFound: 'кухня распознана',
+        problemVoice: 'kitchenProblem',
+        successVoice: 'kitchenSuccess'
+      },
+      livingroom: {
+        name: '📺 Гостиная',
+        question: 'Ой! В пустой комнате работают телевизор и свет.<br>Что нужно сделать?',
+        button: 'Выключить всё',
+        solvedBadge: '✓ Всё выключено',
+        success: '✓ Отлично! Электроэнергия сбережена! 💡⚡',
+        statusFound: 'гостиная распознана',
+        problemVoice: 'livingroomProblem',
+        successVoice: 'livingroomSuccess'
+      },
+      bedroom: {
+        name: '🛏️ Спальня',
+        question: 'Ой! Тепло уходит через открытое окно.<br>Что нужно сделать?',
+        button: 'Закрыть окно',
+        solvedBadge: '✓ Окно закрыто',
+        success: '✓ Отлично! Тепло осталось в доме! 🏠⚡',
+        statusFound: 'спальня распознана',
+        problemVoice: 'bedroomProblem',
+        successVoice: 'bedroomSuccess'
+      }
+    };
+
+    const visibleTargets = {
+      bathroom: false,
+      kitchen: false,
+      livingroom: false,
+      bedroom: false
+    };
+
+    let gameOpen = false;
+    let solved = false;
+    let currentRoom = null;
+    let blockedRoom = null;
+    let missionStarted = false;
+    const completedRooms = new Set();
+
+    const roomKeys = Object.keys(rooms);
+
+    const updateProgress = () => {
+      progressPill.textContent = `Найдено: ${completedRooms.size} из 4`;
+    };
+
+    const hideAllMedia = () => {
+      roomKeys.forEach(key => {
+        videos[key].pause();
+        videos[key].style.display = 'none';
+        stills[key].style.display = 'none';
+      });
+    };
+
+    const hideLoader = () => {
+      loader.style.display = 'none';
+
+      if (!missionStarted) {
+        introOverlay.style.display = 'flex';
+        scanUI.style.display = 'none';
+        status.textContent = 'камера готова — ждём начала миссии';
+      } else {
+        scanUI.style.display = 'block';
+        status.textContent = 'камера готова — ищем комнату';
+      }
+    };
+
+    const prepareRoom = (key) => {
+      const room = rooms[key];
+      currentRoom = key;
+
+      roomName.textContent = room.name;
+      taskCard.innerHTML = room.question;
+      actionButton.textContent = room.button;
+      successCard.textContent = room.success;
+      foundBadge.textContent = '⚠ Нарушение найдено!';
+
+      hideAllMedia();
+
+      taskCard.style.display = 'block';
+      actionButton.style.display = 'block';
+      successCard.style.display = 'none';
+      scanAgain.style.display = 'none';
+    };
+
+    const openGame = async (key) => {
+      if (!missionStarted) return;
+      if (gameOpen) return;
+      if (blockedRoom === key) return;
+
+      if (completedRooms.has(key)) {
+        scanHint.textContent = 'Эта комната уже проверена ✓ Найдите другую.';
+        status.textContent = 'комната уже выполнена';
+        return;
+      }
+
+      // Сразу блокируем повторные targetFound, пока готовится видео.
+      gameOpen = true;
+      solved = false;
+
+      prepareRoom(key);
+
+      scanHint.textContent = 'Нарушение найдено — загружаем анимацию…';
+      status.textContent = 'готовим анимацию комнаты';
+
+      // Приоритет — видео текущей комнаты. Остальные MP4 не загружаются.
+      await waitForRoomVideo(key);
+
+      // Если пользователь уже вышел из комнаты за время загрузки — ничего не показываем.
+      if (!gameOpen || currentRoom !== key) return;
+
+      // Правильную статичную картинку готовим уже после первого кадра видео.
+      preloadStill(key);
+
+      videos[key].style.display = 'block';
+
+      try {
+        videos[key].currentTime = 0;
+        await videos[key].play();
+      } catch (e) {
+        foundBadge.textContent = '⚠ Нарушение найдено! Коснитесь картинки';
+      }
+
+      // Только теперь показываем карточку задания — видео уже готово.
+      scanUI.style.display = 'none';
+      gameOverlay.style.display = 'block';
+      gameOverlay.scrollTop = 0;
+      status.textContent = rooms[key].statusFound;
+
+      queueVoice(rooms[key].problemVoice);
+    };
+
+    const resetGame = () => {
+      const previousRoom = currentRoom;
+
+      solved = false;
+      gameOpen = false;
+      currentRoom = null;
+
+      hideAllMedia();
+
+      taskCard.style.display = 'block';
+      actionButton.style.display = 'block';
+      successCard.style.display = 'none';
+      scanAgain.style.display = 'none';
+      foundBadge.textContent = '⚠ Нарушение найдено!';
+
+      gameOverlay.scrollTop = 0;
+      gameOverlay.style.display = 'none';
+
+      blockedRoom = previousRoom;
+
+      if (completedRooms.size >= 4) {
+        scanUI.style.display = 'none';
+        finalOverlay.style.display = 'flex';
+        status.textContent = 'миссия выполнена';
+        playVoiceNow('final');
+        return;
+      }
+
+      scanUI.style.display = 'block';
+      scanHint.textContent = 'Наведите камеру на другую комнату дома';
+      status.textContent = 'камера готова — ищем другую комнату';
+
+      // Если при выходе уже видна другая НЕПРОЙДЕННАЯ мишень, открываем её.
+      const alreadyVisibleOther = roomKeys.find(
+        key =>
+          key !== previousRoom &&
+          visibleTargets[key] &&
+          !completedRooms.has(key)
+      );
+
+      if (alreadyVisibleOther) {
+        setTimeout(() => openGame(alreadyVisibleOther), 150);
+      }
+    };
+
+    const solveCurrentRoom = async () => {
+      if (!currentRoom || solved) return;
+
+      const roomKey = currentRoom;
+      solved = true;
+      completedRooms.add(roomKey);
+      updateProgress();
+
+      // Если картинка ещё не успела декодироваться, оставляем видео на экране
+      // ещё на долю секунды и меняем кадр только после полной готовности PNG.
+      await preloadStill(roomKey);
+
+      videos[roomKey].pause();
+      stills[roomKey].style.display = 'block';
+
+      // Даём браузеру один кадр на готовую картинку и только потом убираем видео.
+      requestAnimationFrame(() => {
+        videos[roomKey].style.display = 'none';
+      });
+
+      taskCard.style.display = 'none';
+      actionButton.style.display = 'none';
+      successCard.style.display = 'block';
+      scanAgain.style.display = 'block';
+
+      foundBadge.textContent = rooms[roomKey].solvedBadge;
+
+      // Пользователь уже выполнил действие — похвала важнее незаконченной
+      // вопросительной реплики, поэтому она может её заменить.
+      playVoiceNow(rooms[roomKey].successVoice);
+
+      if (completedRooms.size >= 4) {
+        scanAgain.textContent = 'Завершить миссию';
+        status.textContent = 'все 4 нарушения устранены';
+      } else {
+        scanAgain.textContent = 'Искать следующее нарушение';
+        status.textContent = `выполнено ${completedRooms.size} из 4`;
+      }
+    };
+
+    scene.addEventListener('arReady', hideLoader);
+
+    scene.addEventListener('arError', () => {
+      loader.style.display = 'none';
+      introOverlay.style.display = 'none';
+      finalOverlay.style.display = 'none';
+      scanUI.style.display = 'block';
+      scanHint.textContent = 'Не удалось запустить камеру. Обновите страницу и разрешите доступ к камере.';
+      status.textContent = 'ошибка запуска AR';
+    });
+
+    setTimeout(() => {
+      if (loader.style.display !== 'none') {
+        hideLoader();
+      }
+    }, 4500);
+
+    roomKeys.forEach(key => {
+      targets[key].addEventListener('targetFound', () => {
+        visibleTargets[key] = true;
+
+        if (
+          missionStarted &&
+          !gameOpen &&
+          blockedRoom !== key &&
+          !completedRooms.has(key)
+        ) {
+          openGame(key);
+        } else if (missionStarted && completedRooms.has(key) && !gameOpen) {
+          scanHint.textContent = 'Эта комната уже проверена ✓ Найдите другую.';
+          status.textContent = 'комната уже выполнена';
+        }
+      });
+
+      targets[key].addEventListener('targetLost', () => {
+        visibleTargets[key] = false;
+
+        if (blockedRoom === key) {
+          blockedRoom = null;
+        }
+
+        if (!gameOpen) {
+          status.textContent = 'ищем комнату';
+        }
+      });
+
+      videos[key].addEventListener('click', async () => {
+        if (!solved) {
+          try {
+            await videos[key].play();
+          } catch (e) {}
+        }
+      });
+    });
+
+    startMission.addEventListener('click', () => {
+      missionStarted = true;
+      introOverlay.style.display = 'none';
+      finalOverlay.style.display = 'none';
+      scanUI.style.display = 'block';
+      updateProgress();
+      scanHint.textContent = 'Наведите камеру на комнату дома';
+      status.textContent = 'камера готова — ищем комнату';
+
+      // Приветствие запускаем НАПРЯМУЮ внутри пользовательского клика.
+      // Это надёжнее для мобильных браузеров, чем ставить первую реплику в очередь.
+      try {
+        voiceQueue = [];
+
+        if (currentVoice && audio[currentVoice]) {
+          audio[currentVoice].pause();
+          audio[currentVoice].currentTime = 0;
+          audio[currentVoice].onended = null;
+          audio[currentVoice].onerror = null;
+        }
+
+        currentVoice = 'intro';
+        const introAudio = audio.intro;
+
+        introAudio.pause();
+        introAudio.currentTime = 0;
+        introAudio.muted = false;
+        introAudio.volume = 1;
+
+        const finishIntro = () => {
+          introAudio.onended = null;
+          introAudio.onerror = null;
+          currentVoice = null;
+          runVoiceQueue();
+        };
+
+        introAudio.onended = finishIntro;
+        introAudio.onerror = finishIntro;
+
+        const introPlay = introAudio.play();
+        if (introPlay && introPlay.catch) {
+          introPlay.catch(() => finishIntro());
+        }
+      } catch (e) {
+        currentVoice = null;
+      }
+
+      // Пока ребёнок читал стартовый экран, MindAR уже мог увидеть комнату.
+      // Открываем её сразу, не заставляя убирать и снова наводить телефон.
+      const alreadyVisible = roomKeys.find(
+        key => visibleTargets[key] && !completedRooms.has(key)
+      );
+
+      if (alreadyVisible) {
+        setTimeout(() => openGame(alreadyVisible), 120);
+      }
+    });
+
+    restartMission.addEventListener('click', () => {
+      stopAllVoice();
+      completedRooms.clear();
+      updateProgress();
+      missionStarted = true;
+      gameOpen = false;
+      solved = false;
+      currentRoom = null;
+      blockedRoom = null;
+
+      hideAllMedia();
+      finalOverlay.style.display = 'none';
+      gameOverlay.style.display = 'none';
+      scanUI.style.display = 'block';
+      scanHint.textContent = 'Наведите камеру на комнату дома';
+      status.textContent = 'новая миссия — ищем комнату';
+
+      const alreadyVisible = roomKeys.find(key => visibleTargets[key]);
+      if (alreadyVisible) {
+        setTimeout(() => openGame(alreadyVisible), 120);
+      }
+    });
+
+    actionButton.addEventListener('click', solveCurrentRoom);
+    scanAgain.addEventListener('click', resetGame);
+    closeGame.addEventListener('click', resetGame);
+  </script>
+</body>
+</html>
