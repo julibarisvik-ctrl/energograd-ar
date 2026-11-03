@@ -242,6 +242,95 @@
       pointer-events: none;
     }
 
+
+    #introOverlay,
+    #finalOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(5,23,32,.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .mission-card {
+      width: min(100%, 470px);
+      padding: 28px 22px 24px;
+      border-radius: 30px;
+      background: rgba(255,255,255,.98);
+      box-shadow: 0 20px 55px rgba(0,0,0,.35);
+      text-align: center;
+      color: #17384a;
+    }
+
+    .mission-title {
+      font-size: clamp(27px, 7vw, 37px);
+      line-height: 1.05;
+      font-weight: 900;
+      margin-bottom: 14px;
+    }
+
+    .mission-text {
+      font-size: clamp(18px, 4.8vw, 22px);
+      line-height: 1.35;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    .mission-list {
+      margin: 0 0 22px;
+      padding: 14px 16px;
+      border-radius: 22px;
+      background: #eef7f8;
+      font-size: clamp(16px, 4.3vw, 20px);
+      line-height: 1.45;
+      font-weight: 750;
+    }
+
+    .mission-button {
+      width: 100%;
+      min-height: 58px;
+      border: 0;
+      border-radius: 24px;
+      padding: 15px 20px;
+      color: #fff;
+      background: linear-gradient(90deg, #ff6b37, #ff008f);
+      box-shadow: 0 10px 25px rgba(0,0,0,.20);
+      font-size: clamp(21px, 5.7vw, 27px);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .progress-pill {
+      position: absolute;
+      top: max(78px, calc(env(safe-area-inset-top) + 78px));
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 15px;
+      border-radius: 999px;
+      color: #fff;
+      background: rgba(20,71,91,.90);
+      box-shadow: 0 7px 20px rgba(0,0,0,.18);
+      font-size: clamp(15px, 4vw, 18px);
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .final-score {
+      display: inline-block;
+      margin: 4px 0 15px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      color: #fff;
+      background: #14704a;
+      font-size: clamp(20px, 5.4vw, 26px);
+      font-weight: 900;
+    }
+
     @media (max-height: 700px) {
       .game-shell { justify-content: flex-start; }
       .media-card { width: min(82vw, 370px); align-self: center; }
@@ -254,9 +343,37 @@
 <body>
   <div id="loader">Запускаем камеру…<br>Разрешите доступ к камере.</div>
 
-  <div id="scanUI">
+  <div id="introOverlay">
+    <div class="mission-card">
+      <div class="mission-title">⚡ Миссия Энергоши</div>
+      <div class="mission-text">
+        В доме спрятались четыре нарушения. Найди их и помоги дому экономить ресурсы!
+      </div>
+      <div class="mission-list">
+        💧 сберечь воду<br>
+        ❄️ не терять холод<br>
+        💡 экономить электричество<br>
+        🏠 сохранить тепло
+      </div>
+      <button class="mission-button" id="startMission">Начать поиск</button>
+    </div>
+  </div>
+
+  <div id="scanUI" style="display:none">
     <div class="title-pill">Энергоград · Умный дом</div>
+    <div class="progress-pill" id="progressPill">Найдено: 0 из 4</div>
     <div class="scan-hint" id="scanHint">Наведите камеру на комнату дома</div>
+  </div>
+
+  <div id="finalOverlay">
+    <div class="mission-card">
+      <div class="mission-title">🏆 Миссия выполнена!</div>
+      <div class="final-score">4 из 4</div>
+      <div class="mission-text">
+        Все нарушения устранены. Теперь дом Энергоши бережёт воду, электричество и тепло!
+      </div>
+      <button class="mission-button" id="restartMission">Пройти ещё раз</button>
+    </div>
   </div>
 
   <div id="status">запускаем камеру…</div>
@@ -315,7 +432,7 @@
   </div>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-20261102-1; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-mission-20261103-1; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
     embedded
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
@@ -332,6 +449,11 @@
 
   <script>
     const loader = document.getElementById('loader');
+    const introOverlay = document.getElementById('introOverlay');
+    const finalOverlay = document.getElementById('finalOverlay');
+    const startMission = document.getElementById('startMission');
+    const restartMission = document.getElementById('restartMission');
+    const progressPill = document.getElementById('progressPill');
     const scanUI = document.getElementById('scanUI');
     const scanHint = document.getElementById('scanHint');
     const status = document.getElementById('status');
@@ -413,8 +535,14 @@
     let solved = false;
     let currentRoom = null;
     let blockedRoom = null;
+    let missionStarted = false;
+    const completedRooms = new Set();
 
     const roomKeys = Object.keys(rooms);
+
+    const updateProgress = () => {
+      progressPill.textContent = `Найдено: ${completedRooms.size} из 4`;
+    };
 
     const hideAllMedia = () => {
       roomKeys.forEach(key => {
@@ -426,7 +554,15 @@
 
     const hideLoader = () => {
       loader.style.display = 'none';
-      status.textContent = 'камера готова — ищем комнату';
+
+      if (!missionStarted) {
+        introOverlay.style.display = 'flex';
+        scanUI.style.display = 'none';
+        status.textContent = 'камера готова — ждём начала миссии';
+      } else {
+        scanUI.style.display = 'block';
+        status.textContent = 'камера готова — ищем комнату';
+      }
     };
 
     const prepareRoom = (key) => {
@@ -454,8 +590,15 @@
     };
 
     const openGame = async (key) => {
+      if (!missionStarted) return;
       if (gameOpen) return;
       if (blockedRoom === key) return;
+
+      if (completedRooms.has(key)) {
+        scanHint.textContent = 'Эта комната уже проверена ✓ Найдите другую.';
+        status.textContent = 'комната уже выполнена';
+        return;
+      }
 
       prepareRoom(key);
 
@@ -491,15 +634,26 @@
 
       gameOverlay.scrollTop = 0;
       gameOverlay.style.display = 'none';
+
+      blockedRoom = previousRoom;
+
+      if (completedRooms.size >= 4) {
+        scanUI.style.display = 'none';
+        finalOverlay.style.display = 'flex';
+        status.textContent = 'миссия выполнена';
+        return;
+      }
+
       scanUI.style.display = 'block';
       scanHint.textContent = 'Наведите камеру на другую комнату дома';
       status.textContent = 'камера готова — ищем другую комнату';
 
-      blockedRoom = previousRoom;
-
-      // Если при выходе уже видна какая-то другая мишень, открываем её.
+      // Если при выходе уже видна другая НЕПРОЙДЕННАЯ мишень, открываем её.
       const alreadyVisibleOther = roomKeys.find(
-        key => key !== previousRoom && visibleTargets[key]
+        key =>
+          key !== previousRoom &&
+          visibleTargets[key] &&
+          !completedRooms.has(key)
       );
 
       if (alreadyVisibleOther) {
@@ -511,6 +665,8 @@
       if (!currentRoom) return;
 
       solved = true;
+      completedRooms.add(currentRoom);
+      updateProgress();
 
       videos[currentRoom].pause();
       videos[currentRoom].style.display = 'none';
@@ -522,13 +678,22 @@
       scanAgain.style.display = 'block';
 
       foundBadge.textContent = rooms[currentRoom].solvedBadge;
-      status.textContent = 'задание выполнено';
+
+      if (completedRooms.size >= 4) {
+        scanAgain.textContent = 'Завершить миссию';
+        status.textContent = 'все 4 нарушения устранены';
+      } else {
+        scanAgain.textContent = 'Искать следующее нарушение';
+        status.textContent = `выполнено ${completedRooms.size} из 4`;
+      }
     };
 
     scene.addEventListener('arReady', hideLoader);
 
     scene.addEventListener('arError', () => {
       loader.style.display = 'none';
+      introOverlay.style.display = 'none';
+      finalOverlay.style.display = 'none';
       scanUI.style.display = 'block';
       scanHint.textContent = 'Не удалось запустить камеру. Обновите страницу и разрешите доступ к камере.';
       status.textContent = 'ошибка запуска AR';
@@ -544,8 +709,16 @@
       targets[key].addEventListener('targetFound', () => {
         visibleTargets[key] = true;
 
-        if (!gameOpen && blockedRoom !== key) {
+        if (
+          missionStarted &&
+          !gameOpen &&
+          blockedRoom !== key &&
+          !completedRooms.has(key)
+        ) {
           openGame(key);
+        } else if (missionStarted && completedRooms.has(key) && !gameOpen) {
+          scanHint.textContent = 'Эта комната уже проверена ✓ Найдите другую.';
+          status.textContent = 'комната уже выполнена';
         }
       });
 
@@ -568,6 +741,48 @@
           } catch (e) {}
         }
       });
+    });
+
+    startMission.addEventListener('click', () => {
+      missionStarted = true;
+      introOverlay.style.display = 'none';
+      finalOverlay.style.display = 'none';
+      scanUI.style.display = 'block';
+      updateProgress();
+      scanHint.textContent = 'Наведите камеру на комнату дома';
+      status.textContent = 'камера готова — ищем комнату';
+
+      // Пока ребёнок читал стартовый экран, MindAR уже мог увидеть комнату.
+      // Открываем её сразу, не заставляя убирать и снова наводить телефон.
+      const alreadyVisible = roomKeys.find(
+        key => visibleTargets[key] && !completedRooms.has(key)
+      );
+
+      if (alreadyVisible) {
+        setTimeout(() => openGame(alreadyVisible), 120);
+      }
+    });
+
+    restartMission.addEventListener('click', () => {
+      completedRooms.clear();
+      updateProgress();
+      missionStarted = true;
+      gameOpen = false;
+      solved = false;
+      currentRoom = null;
+      blockedRoom = null;
+
+      hideAllMedia();
+      finalOverlay.style.display = 'none';
+      gameOverlay.style.display = 'none';
+      scanUI.style.display = 'block';
+      scanHint.textContent = 'Наведите камеру на комнату дома';
+      status.textContent = 'новая миссия — ищем комнату';
+
+      const alreadyVisible = roomKeys.find(key => visibleTargets[key]);
+      if (alreadyVisible) {
+        setTimeout(() => openGame(alreadyVisible), 120);
+      }
     });
 
     actionButton.addEventListener('click', solveCurrentRoom);
