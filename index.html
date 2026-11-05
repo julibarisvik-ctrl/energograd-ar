@@ -257,6 +257,27 @@
       -webkit-backdrop-filter: blur(8px);
     }
 
+
+    .intro-video {
+      display: block;
+      width: min(82vw, 390px);
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      margin: 12px auto 18px;
+      border-radius: 26px;
+      background: #0b2530;
+      box-shadow: 0 14px 32px rgba(0,0,0,.22);
+    }
+
+    #introPlayingText {
+      display: none;
+      margin: 10px 0 2px;
+      color: #14704a;
+      font-size: 16px;
+      line-height: 1.3;
+      font-weight: 850;
+    }
+
     .mission-card {
       width: min(100%, 470px);
       padding: 28px 22px 24px;
@@ -346,16 +367,22 @@
   <div id="introOverlay">
     <div class="mission-card">
       <div class="mission-title">⚡ Миссия Энергоши</div>
+
+      <video
+        id="introVideo"
+        class="intro-video"
+        src="./assets/energosha_intro.mp4"
+        poster="./assets/energosha_intro_poster.jpg"
+        preload="auto"
+        playsinline
+      ></video>
+
       <div class="mission-text">
-        В доме спрятались четыре нарушения. Найди их и помоги дому экономить ресурсы!
+        Познакомься с Энергошей и отправляйся искать нарушения в умном доме.
       </div>
-      <div class="mission-list">
-        💧 сберечь воду<br>
-        ❄️ не терять холод<br>
-        💡 экономить электричество<br>
-        🏠 сохранить тепло
-      </div>
-      <button class="mission-button" id="startMission">Начать поиск</button>
+
+      <button class="mission-button" id="startMission">Начать миссию</button>
+      <div id="introPlayingText">🔊 Энергоша рассказывает задание…</div>
     </div>
   </div>
 
@@ -433,7 +460,7 @@
 
   <!-- Озвучка. Она не управляет AR и не влияет на распознавание комнат. -->
   <div id="audioBank" style="display:none">
-    <audio id="audioIntro" src="./assets/intro.mp3" preload="auto"></audio>
+    <audio id="audioIntro" src="./assets/intro.mp3" preload="none"></audio>
 
     <audio id="audioBathroomProblem" src="./assets/bathroom_problem.mp3" preload="none"></audio>
     <audio id="audioBathroomSuccess" src="./assets/bathroom_success.mp3" preload="none"></audio>
@@ -451,7 +478,7 @@
   </div>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-video-priority-20261103-1; warmupTolerance: 1; missTolerance: 5; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="imageTargetSrc: ./assets/targets.mind?v=4rooms-introvideo-20261105-1; warmupTolerance: 1; missTolerance: 5; autoStart: true; uiLoading: no; uiScanning: no; uiError: no;"
     embedded
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
@@ -471,6 +498,8 @@
     const introOverlay = document.getElementById('introOverlay');
     const finalOverlay = document.getElementById('finalOverlay');
     const startMission = document.getElementById('startMission');
+    const introVideo = document.getElementById('introVideo');
+    const introPlayingText = document.getElementById('introPlayingText');
     const restartMission = document.getElementById('restartMission');
     const progressPill = document.getElementById('progressPill');
     const scanUI = document.getElementById('scanUI');
@@ -730,6 +759,7 @@
     let currentRoom = null;
     let blockedRoom = null;
     let missionStarted = false;
+    let introPlaying = false;
     const completedRooms = new Set();
 
     const roomKeys = Object.keys(rooms);
@@ -778,7 +808,7 @@
     };
 
     const openGame = async (key) => {
-      if (!missionStarted) return;
+      if (!missionStarted || introPlaying) return;
       if (gameOpen) return;
       if (blockedRoom === key) return;
 
@@ -965,60 +995,66 @@
     });
 
     startMission.addEventListener('click', () => {
-      missionStarted = true;
-      introOverlay.style.display = 'none';
-      finalOverlay.style.display = 'none';
-      scanUI.style.display = 'block';
-      updateProgress();
-      scanHint.textContent = 'Наведите камеру на комнату дома';
-      status.textContent = 'камера готова — ищем комнату';
+      if (introPlaying) return;
 
-      // Приветствие запускаем НАПРЯМУЮ внутри пользовательского клика.
-      // Это надёжнее для мобильных браузеров, чем ставить первую реплику в очередь.
-      try {
-        voiceQueue = [];
+      introPlaying = true;
+      startMission.style.display = 'none';
+      introPlayingText.style.display = 'block';
+      status.textContent = 'Энергоша приветствует игрока';
 
-        if (currentVoice && audio[currentVoice]) {
-          audio[currentVoice].pause();
-          audio[currentVoice].currentTime = 0;
-          audio[currentVoice].onended = null;
-          audio[currentVoice].onerror = null;
+      // No separate intro.mp3 here: the video already contains the greeting voice.
+      stopAllVoice();
+
+      const finishIntroVideo = () => {
+        if (!introPlaying) return;
+
+        introPlaying = false;
+        missionStarted = true;
+
+        introVideo.onended = null;
+        introVideo.onerror = null;
+
+        introPlayingText.style.display = 'none';
+        startMission.style.display = 'block';
+
+        introOverlay.style.display = 'none';
+        finalOverlay.style.display = 'none';
+        scanUI.style.display = 'block';
+        updateProgress();
+
+        scanHint.textContent = 'Наведите камеру на комнату дома';
+        status.textContent = 'камера готова — ищем комнату';
+
+        // The camera can already have seen a target while the intro was playing.
+        const alreadyVisible = roomKeys.find(
+          key => visibleTargets[key] && !completedRooms.has(key)
+        );
+
+        if (alreadyVisible) {
+          setTimeout(() => openGame(alreadyVisible), 120);
         }
+      };
 
-        currentVoice = 'intro';
-        const introAudio = audio.intro;
+      try {
+        introVideo.pause();
+        introVideo.currentTime = 0;
+        introVideo.muted = false;
+        introVideo.volume = 1;
 
-        introAudio.pause();
-        introAudio.currentTime = 0;
-        introAudio.muted = false;
-        introAudio.volume = 1;
+        introVideo.onended = finishIntroVideo;
+        introVideo.onerror = finishIntroVideo;
 
-        const finishIntro = () => {
-          introAudio.onended = null;
-          introAudio.onerror = null;
-          currentVoice = null;
-          runVoiceQueue();
-        };
-
-        introAudio.onended = finishIntro;
-        introAudio.onerror = finishIntro;
-
-        const introPlay = introAudio.play();
-        if (introPlay && introPlay.catch) {
-          introPlay.catch(() => finishIntro());
+        const p = introVideo.play();
+        if (p && p.catch) {
+          p.catch(() => {
+            introPlayingText.textContent = 'Коснитесь видео, чтобы запустить приветствие';
+            startMission.style.display = 'block';
+            startMission.textContent = 'Запустить приветствие';
+            introPlaying = false;
+          });
         }
       } catch (e) {
-        currentVoice = null;
-      }
-
-      // Пока ребёнок читал стартовый экран, MindAR уже мог увидеть комнату.
-      // Открываем её сразу, не заставляя убирать и снова наводить телефон.
-      const alreadyVisible = roomKeys.find(
-        key => visibleTargets[key] && !completedRooms.has(key)
-      );
-
-      if (alreadyVisible) {
-        setTimeout(() => openGame(alreadyVisible), 120);
+        finishIntroVideo();
       }
     });
 
@@ -1026,6 +1062,11 @@
       stopAllVoice();
       completedRooms.clear();
       updateProgress();
+      introPlaying = false;
+      try {
+        introVideo.pause();
+        introVideo.currentTime = 0;
+      } catch (e) {}
       missionStarted = true;
       gameOpen = false;
       solved = false;
